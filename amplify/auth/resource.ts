@@ -5,6 +5,8 @@ import {
   UserPoolResourceServer,
   UserPoolClient,
   OAuthScope,
+  ResourceServerScope,
+  ClientAttributes,
 } from 'aws-cdk-lib/aws-cognito';
 import { Tags } from 'aws-cdk-lib';
 
@@ -38,6 +40,17 @@ export function createCognitoUserPool(scope: Construct): {
   const domainName = `biometric-api-${env}`;
   const resourceServerIdentifier = 'https://biometric.danaconnect.com';
 
+  // Create Resource Server Scopes
+  const startCircuitScope = new ResourceServerScope({
+    scopeName: 'biometric/start_circuit',
+    scopeDescription: 'Create and start biometric circuits',
+  });
+
+  const readScope = new ResourceServerScope({
+    scopeName: 'biometric/read',
+    scopeDescription: 'Read biometric configuration and status',
+  });
+
   // Create User Pool (no user registration, only for token validation)
   const userPool = new UserPool(scope, 'UserPool', {
     userPoolName: userPoolId,
@@ -59,16 +72,7 @@ export function createCognitoUserPool(scope: Construct): {
   const resourceServer = new UserPoolResourceServer(scope, 'ResourceServer', {
     identifier: resourceServerIdentifier,
     userPool: userPool,
-    scopes: [
-      new OAuthScope({
-        scopeName: 'biometric/start_circuit',
-        description: 'Create and start biometric circuits',
-      }),
-      new OAuthScope({
-        scopeName: 'biometric/read',
-        description: 'Read biometric configuration and status',
-      }),
-    ],
+    scopes: [startCircuitScope, readScope],
   });
 
   applyTags(resourceServer);
@@ -77,15 +81,13 @@ export function createCognitoUserPool(scope: Construct): {
   const userPoolClient = new UserPoolClient(scope, 'UserPoolClient', {
     userPool: userPool,
     clientName: `biometric-api-${env}-client`,
-    // Client Credentials flow - no user authentication
-    authFlows: {
-      userPoolClientBasic: false,
-      userPoolClientSRP: false,
-      custom: false,
-      // Enable Client Credentials flow
-      adminUserPassword: false,
-    },
+    generateSecret: true,
     // OAuth configuration for Client Credentials
+    authFlows: {
+      custom: false,
+      userPassword: false,
+      userSrp: false,
+    },
     oAuth: {
       flows: {
         authorizationCodeGrant: false,
@@ -93,8 +95,8 @@ export function createCognitoUserPool(scope: Construct): {
         clientCredentials: true,
       },
       scopes: [
-        OAuthScope.resourceServer(resourceServer, 'biometric/start_circuit'),
-        OAuthScope.resourceServer(resourceServer, 'biometric/read'),
+        OAuthScope.resourceServer(resourceServer, startCircuitScope),
+        OAuthScope.resourceServer(resourceServer, readScope),
       ],
       // No callback URLs needed for Client Credentials
       callbackUrls: [],
@@ -103,8 +105,8 @@ export function createCognitoUserPool(scope: Construct): {
     // Prevent token issues - Client Credentials doesn't use refresh tokens
     preventUserExistenceErrors: true,
     // No write access - machine-to-machine only
-    readAttributes: [],
-    writeAttributes: [],
+    readAttributes: new ClientAttributes(),
+    writeAttributes: new ClientAttributes(),
   });
 
   applyTags(userPoolClient);
