@@ -76,6 +76,7 @@ export function createApiGateway(
   Tags.of(api).add('Project', 'biometric-api');
   Tags.of(api).add('Environment', env);
 
+  // Authorizer must be created after RestApi and attached to it
   const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
     scope,
     'BiometricCognitoAuthorizer',
@@ -86,11 +87,12 @@ export function createApiGateway(
       resultsCacheTtl: Duration.minutes(5),
     }
   );
+  cognitoAuthorizer._attachToApi(api);
 
-  const cognitoOptions: MethodOptions = {
+  const cognitoOptions = (authorizer: CognitoUserPoolsAuthorizer): MethodOptions => ({
     authorizationType: AuthorizationType.COGNITO,
-    authorizer: cognitoAuthorizer,
-  };
+    authorizer,
+  });
 
   // POST /oauth2/token
   const oauthResource = api.root.addResource('oauth2');
@@ -112,7 +114,7 @@ export function createApiGateway(
     biometricResource
       .addResource('get_config')
       .addResource('{circuit_id}')
-      .addMethod('GET', getConfigIntegration, cognitoOptions);
+      .addMethod('GET', getConfigIntegration, cognitoOptions(cognitoAuthorizer));
   }
 
   // POST /api/biometric/start_circuit/{channel_id}
@@ -121,7 +123,7 @@ export function createApiGateway(
     biometricResource
       .addResource('start_circuit')
       .addResource('{channel_id}')
-      .addMethod('POST', startCircuitIntegration, cognitoOptions);
+      .addMethod('POST', startCircuitIntegration, cognitoOptions(cognitoAuthorizer));
   }
 
   // POST /api/biometric/process_circuit/{circuit_id}
@@ -130,7 +132,7 @@ export function createApiGateway(
     biometricResource
       .addResource('process_circuit')
       .addResource('{circuit_id}')
-      .addMethod('POST', processCircuitIntegration, cognitoOptions);
+      .addMethod('POST', processCircuitIntegration, cognitoOptions(cognitoAuthorizer));
   }
 
   // /api/admin
