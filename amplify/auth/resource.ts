@@ -32,12 +32,12 @@ function applyTags(construct: Construct): void {
  */
 export function createCognitoUserPool(scope: Construct): {
   userPool: UserPool;
-  userPoolDomain: UserPoolDomain;
+  userPoolDomain: string;
   userPoolClient: UserPoolClient;
 } {
   const env = getEnv();
   const userPoolId = `biometric-api-${env}-userpool`;
-  const domainName = `biometric-api-${env}`;
+  const domainPrefix = `biometric-api-${env}`;
   const resourceServerIdentifier = 'https://biometric.danaconnect.com';
 
   // Create Resource Server Scopes
@@ -80,7 +80,7 @@ export function createCognitoUserPool(scope: Construct): {
   // Create Client Credentials client
   const userPoolClient = new UserPoolClient(scope, 'UserPoolClient', {
     userPool: userPool,
-    clientName: `biometric-api-${env}-client`,
+    userPoolClientName: `biometric-api-${env}-client`,
     generateSecret: true,
     // OAuth configuration for Client Credentials
     authFlows: {
@@ -112,25 +112,21 @@ export function createCognitoUserPool(scope: Construct): {
   applyTags(userPoolClient);
 
   // Create User Pool Domain (for token endpoint URL)
-  const userPoolDomain = new UserPoolDomain(scope, 'UserPoolDomain', {
+  new UserPoolDomain(scope, 'UserPoolDomain', {
     userPool: userPool,
     cognitoDomain: {
-      domainPrefix: domainName,
+      domainPrefix: domainPrefix,
     },
   });
 
-  applyTags(userPoolDomain);
+  applyTags(scope);
 
-  return { userPool, userPoolDomain, userPoolClient };
+  return { userPool, userPoolDomain: domainPrefix, userPoolClient };
 }
 
 /**
  * Get Cognito token URL for Client Credentials flow
  */
-export function getCognitoTokenUrl(
-  userPoolDomain: UserPoolDomain,
-  region: string
-): string {
-  const domainPrefix = userPoolDomain.domain.domainPrefix;
+export function getCognitoTokenUrl(domainPrefix: string, region: string): string {
   return `https://${domainPrefix}.auth.${region}.amazoncognito.com/oauth2/token`;
 }

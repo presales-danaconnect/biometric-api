@@ -30,7 +30,7 @@ backend.addOutput({
     circuitsTableName: circuitsTable.tableName,
     // Cognito configuration
     userPoolId: userPool.userPoolId,
-    userPoolDomain: userPoolDomain.domain.domainPrefix,
+    userPoolDomain: userPoolDomain,
     cognitoTokenUrl: getCognitoTokenUrl(userPoolDomain, region),
     cognitoClientId: userPoolClient.userPoolClientId,
   },
