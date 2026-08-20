@@ -72,7 +72,7 @@ export function createApiGateway(
   const apiName = `biometric-api-${env}-gateway`;
 
   // Create REST API with regional endpoint
-  const api = new RestApi(scope, 'BiometricApi', {
+  const api = new RestApi(scope, 'BiometricApiGateway', {
     restApiName: apiName,
     endpointTypes: [EndpointType.REGIONAL],
     defaultCorsPreflightOptions: {
@@ -96,7 +96,7 @@ export function createApiGateway(
   // Create Cognito authorizer for biometric endpoints
   const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
     scope,
-    'CognitoAuthorizer',
+    'BiometricCognitoAuthorizer',
     {
       cognitoUserPools: [config.userPool],
       authorizerName: 'biometric-cognito-authorizer',
