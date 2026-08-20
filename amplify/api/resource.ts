@@ -54,12 +54,19 @@ export interface ApiGatewayOutputs {
 }
 
 /**
+ * Safely creates a LambdaIntegration, returning undefined if lambda is not provided
+ */
+function safeIntegration(lambda?: IFunction): LambdaIntegration | undefined {
+  return lambda ? new LambdaIntegration(lambda) : undefined;
+}
+
+/**
  * Creates the API Gateway with all endpoints for biometric and admin APIs
  */
 export function createApiGateway(
   scope: Construct,
   config: ApiGatewayConfig,
-  lambdas: ApiLambdaFunctions
+  lambdas?: ApiLambdaFunctions
 ): ApiGatewayOutputs {
   const env = getEnv();
   const apiName = `biometric-api-${env}-gateway`;
@@ -80,9 +87,9 @@ export function createApiGateway(
       allowCredentials: false,
       maxAge: Duration.hours(1),
     },
-    defaultThrottling: {
-      rateLimit: 100,
-      burstLimit: 200,
+    deployOptions: {
+      throttlingRateLimit: 100,
+      throttlingBurstLimit: 200,
     },
   });
 
@@ -108,79 +115,111 @@ export function createApiGateway(
   const tokenResource = oauthResource.addResource('token');
 
   // POST /oauth2/token - Cognito token endpoint (proxied, no auth)
-  tokenResource.addMethod(
-    'POST',
-    new LambdaIntegration(lambdas.oauthToken),
-    getMethodOptions(false)
-  );
+  const oauthIntegration = safeIntegration(lambdas?.oauthToken);
+  if (oauthIntegration) {
+    tokenResource.addMethod('POST', oauthIntegration, getMethodOptions(false));
+  }
 
   // ========== Biometric API (Cognito Authorizer) ==========
   const biometricResource = api.root.addResource('api').addResource('biometric');
 
   // GET /api/biometric/get_config/{circuit_id}
-  const getConfigResource = biometricResource
-    .addResource('get_config')
-    .addResource('{circuit_id}');
-  getConfigResource.addMethod(
-    'GET',
-    new LambdaIntegration(lambdas.getConfig),
-    getMethodOptions(true, cognitoAuthorizer)
-  );
+  const getConfigIntegration = safeIntegration(lambdas?.getConfig);
+  if (getConfigIntegration) {
+    const getConfigResource = biometricResource
+      .addResource('get_config')
+      .addResource('{circuit_id}');
+    getConfigResource.addMethod(
+      'GET',
+      getConfigIntegration,
+      {
+        authorizationType: AuthorizationType.COGNITO,
+        authorizer: cognitoAuthorizer,
+      }
+    );
+  }
 
   // POST /api/biometric/start_circuit/{channel_id}
-  const startCircuitResource = biometricResource
-    .addResource('start_circuit')
-    .addResource('{channel_id}');
-  startCircuitResource.addMethod(
-    'POST',
-    new LambdaIntegration(lambdas.startCircuit),
-    getMethodOptions(true, cognitoAuthorizer)
-  );
+  const startCircuitIntegration = safeIntegration(lambdas?.startCircuit);
+  if (startCircuitIntegration) {
+    const startCircuitResource = biometricResource
+      .addResource('start_circuit')
+      .addResource('{channel_id}');
+    startCircuitResource.addMethod(
+      'POST',
+      startCircuitIntegration,
+      {
+        authorizationType: AuthorizationType.COGNITO,
+        authorizer: cognitoAuthorizer,
+      }
+    );
+  }
 
   // POST /api/biometric/process_circuit/{circuit_id}
-  const processCircuitResource = biometricResource
-    .addResource('process_circuit')
-    .addResource('{circuit_id}');
-  processCircuitResource.addMethod(
-    'POST',
-    new LambdaIntegration(lambdas.processCircuit),
-    getMethodOptions(true, cognitoAuthorizer)
-  );
+  const processCircuitIntegration = safeIntegration(lambdas?.processCircuit);
+  if (processCircuitIntegration) {
+    const processCircuitResource = biometricResource
+      .addResource('process_circuit')
+      .addResource('{circuit_id}');
+    processCircuitResource.addMethod(
+      'POST',
+      processCircuitIntegration,
+      {
+        authorizationType: AuthorizationType.COGNITO,
+        authorizer: cognitoAuthorizer,
+      }
+    );
+  }
 
   // ========== Admin API (x-admin-key header validation in Lambda) ==========
   const adminResource = api.root.addResource('api').addResource('admin');
 
   // POST /api/admin/clients/create
-  const clientsResource = adminResource.addResource('clients');
-  const createClientsResource = clientsResource.addResource('create');
-  createClientsResource.addMethod(
-    'POST',
-    new LambdaIntegration(lambdas.adminClientsCreate),
-    getMethodOptions(false)
-  );
+  const adminClientsCreateIntegration = safeIntegration(lambdas?.adminClientsCreate);
+  if (adminClientsCreateIntegration) {
+    const clientsResource = adminResource.addResource('clients');
+    const createClientsResource = clientsResource.addResource('create');
+    createClientsResource.addMethod(
+      'POST',
+      adminClientsCreateIntegration,
+      getMethodOptions(false)
+    );
+  }
 
   // POST /api/admin/channels
-  const channelsResource = adminResource.addResource('channels');
-  channelsResource.addMethod(
-    'POST',
-    new LambdaIntegration(lambdas.adminChannelsCreate),
-    getMethodOptions(false)
-  );
+  const adminChannelsCreateIntegration = safeIntegration(lambdas?.adminChannelsCreate);
+  if (adminChannelsCreateIntegration) {
+    const channelsResource = adminResource.addResource('channels');
+    channelsResource.addMethod(
+      'POST',
+      adminChannelsCreateIntegration,
+      getMethodOptions(false)
+    );
+  }
 
   // GET /api/admin/channels/{id}
-  const getChannelResource = channelsResource.addResource('{id}');
-  getChannelResource.addMethod(
-    'GET',
-    new LambdaIntegration(lambdas.adminChannelsGet),
-    getMethodOptions(false)
-  );
+  const adminChannelsGetIntegration = safeIntegration(lambdas?.adminChannelsGet);
+  if (adminChannelsGetIntegration) {
+    const channelsResource = adminResource.addResource('channels');
+    const getChannelResource = channelsResource.addResource('{id}');
+    getChannelResource.addMethod(
+      'GET',
+      adminChannelsGetIntegration,
+      getMethodOptions(false)
+    );
+  }
 
   // PUT /api/admin/channels/{id}
-  getChannelResource.addMethod(
-    'PUT',
-    new LambdaIntegration(lambdas.adminChannelsUpdate),
-    getMethodOptions(false)
-  );
+  const adminChannelsUpdateIntegration = safeIntegration(lambdas?.adminChannelsUpdate);
+  if (adminChannelsUpdateIntegration) {
+    const channelsResource = adminResource.addResource('channels');
+    const getChannelResource = channelsResource.addResource('{id}');
+    getChannelResource.addMethod(
+      'PUT',
+      adminChannelsUpdateIntegration,
+      getMethodOptions(false)
+    );
+  }
 
   // Export outputs via CfnOutput for visibility
   const apiGatewayUrl = `https://${api.restApiId}.execute-api.${config.region}.amazonaws.com/${env}`;
@@ -203,23 +242,15 @@ export function createApiGateway(
 }
 
 /**
- * Method options factory for consistent configuration
+ * Method options factory for endpoints without Cognito auth
  */
-function getMethodOptions(
-  requireAuth: boolean,
-  authorizer?: CognitoUserPoolsAuthorizer
-): MethodOptions {
+function getMethodOptions(requireAuth: boolean): MethodOptions {
   const options: MethodOptions = {
     requestValidatorOptions: {
       validateRequestParameters: true,
       validateRequestBody: true,
     },
   };
-
-  if (requireAuth && authorizer) {
-    options.authorizationType = AuthorizationType.COGNITO;
-    options.authorizer = authorizer;
-  }
 
   return options;
 }
