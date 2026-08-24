@@ -6,6 +6,8 @@ import { createAdminCreateClientFunction } from './functions/fn-admin-create-cli
 import { createAdminCreateChannelFunction } from './functions/fn-admin-create-channel/resource';
 import { createAdminGetChannelFunction } from './functions/fn-admin-get-channel/resource';
 import { createAdminUpdateChannelFunction } from './functions/fn-admin-update-channel/resource';
+import { createGetConfigFunction } from './functions/fn-get-config/resource';
+import { createStartCircuitFunction } from './functions/fn-start-circuit/resource';
 import { Stack, Tags } from 'aws-cdk-lib';
 
 const backend = defineBackend({});
@@ -42,12 +44,26 @@ const fnAdminUpdateChannel = createAdminUpdateChannelFunction(
   channelsTable
 );
 
+// Create Lambda functions for Biometric API
+const fnGetConfig = createGetConfigFunction(
+  backend.stack,
+  circuitsTable,
+  channelsTable
+);
+const fnStartCircuit = createStartCircuitFunction(
+  backend.stack,
+  circuitsTable,
+  channelsTable
+);
+
 // Create API Gateway with Lambda integrations
 const lambdas: ApiLambdaFunctions = {
   adminClientsCreate: fnAdminCreateClient,
   adminChannelsCreate: fnAdminCreateChannel,
   adminChannelsGet: fnAdminGetChannel,
   adminChannelsUpdate: fnAdminUpdateChannel,
+  getConfig: fnGetConfig,
+  startCircuit: fnStartCircuit,
 };
 
 const apiGateway = createApiGateway(backend.stack, {
@@ -76,5 +92,7 @@ backend.addOutput({
     fnAdminCreateChannelName: fnAdminCreateChannel.functionName,
     fnAdminGetChannelName: fnAdminGetChannel.functionName,
     fnAdminUpdateChannelName: fnAdminUpdateChannel.functionName,
+    fnGetConfigName: fnGetConfig.functionName,
+    fnStartCircuitName: fnStartCircuit.functionName,
   },
 });
