@@ -3,13 +3,13 @@ import { Construct } from 'constructs';
 import {
   RestApi,
   AuthorizationType,
-  CognitoUserPoolsAuthorizer,
   LambdaIntegration,
   MethodOptions,
   EndpointType,
   IResource,
   CfnDeployment,
   CfnResource,
+  CfnAuthorizer,
 } from 'aws-cdk-lib/aws-apigateway';
 import { IUserPool } from 'aws-cdk-lib/aws-cognito';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
@@ -73,25 +73,19 @@ export function createApiGateway(
   Tags.of(api).add('Project', 'biometric-api');
   Tags.of(api).add('Environment', env);
 
-  // Create Cognito authorizer
-  const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
-    scope,
-    'BiometricCognitoAuthorizer',
-    {
-      cognitoUserPools: [config.userPool],
-      authorizerName: `biometric-api-${env}-authorizer`,
-      identitySource: 'method.request.header.Authorization',
-      resultsCacheTtl: Duration.minutes(5),
-    }
-  );
-
-  // Attach authorizer to API before creating methods
-  cognitoAuthorizer._attachToApi(api);
+  // Create CfnAuthorizer for Cognito user pool
+  const cfnAuthorizer = new CfnAuthorizer(scope, 'BiometricCognitoAuthorizer', {
+    restApiId: api.restApiId,
+    name: `biometric-api-${env}-authorizer`,
+    type: 'COGNITO_USER_POOLS',
+    identitySource: 'method.request.header.Authorization',
+    providerArns: [config.userPool.userPoolArn],
+  });
 
   // Cognito authorizer options
   const cognitoOptions: MethodOptions = {
     authorizationType: AuthorizationType.COGNITO,
-    authorizer: cognitoAuthorizer,
+    authorizer: { authorizerId: cfnAuthorizer.ref },
   };
 
   // No auth options for admin endpoints
@@ -179,9 +173,7 @@ export function createApiGateway(
   // Force deployment to depend on authorizer
   const cfnDeployment = api.latestDeployment?.node.defaultChild as CfnDeployment;
   if (cfnDeployment) {
-    cfnDeployment.addDependency(
-      cognitoAuthorizer.node.defaultChild as CfnResource
-    );
+    cfnDeployment.addDependency(cfnAuthorizer.node.defaultChild as CfnResource);
   }
 
   const apiGatewayUrl = `https://${api.restApiId}.execute-api.${config.region}.amazonaws.com/${env}`;
