@@ -8,6 +8,9 @@ import {
   MethodOptions,
   EndpointType,
   IResource,
+  CfnDeployment,
+  CfnStage,
+  CfnResource,
 } from 'aws-cdk-lib/aws-apigateway';
 import { IUserPool } from 'aws-cdk-lib/aws-cognito';
 import { IFunction } from 'aws-cdk-lib/aws-lambda';
@@ -61,11 +64,7 @@ export function createApiGateway(
       allowCredentials: false,
       maxAge: Duration.hours(1),
     },
-    deployOptions: {
-      stageName: env,
-      throttlingRateLimit: 100,
-      throttlingBurstLimit: 200,
-    },
+    // Remove deployOptions to create explicit CfnDeployment
   });
 
   Tags.of(api).add('Project', 'biometric-api');
@@ -173,6 +172,21 @@ export function createApiGateway(
   if (adminChannelsUpdateIntegration) {
     channelIdResource.addMethod('PUT', adminChannelsUpdateIntegration, noAuthOptions);
   }
+
+  // Create explicit CfnDeployment that depends on the authorizer
+  const deployment = new CfnDeployment(scope, 'BiometricApiDeployment', {
+    restApiId: api.restApiId,
+  });
+
+  // Deployment must depend on the authorizer
+  deployment.addDependency(cognitoAuthorizer.node.defaultChild as CfnResource);
+
+  // Create explicit CfnStage
+  new CfnStage(scope, 'BiometricApiStage', {
+    restApiId: api.restApiId,
+    deploymentId: deployment.ref,
+    stageName: env,
+  });
 
   const apiGatewayUrl = `https://${api.restApiId}.execute-api.${config.region}.amazonaws.com/${env}`;
 
