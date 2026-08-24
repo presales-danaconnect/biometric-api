@@ -8,7 +8,7 @@ import {
   ResourceServerScope,
   ClientAttributes,
 } from 'aws-cdk-lib/aws-cognito';
-import { Tags } from 'aws-cdk-lib';
+import { RemovalPolicy, Tags } from 'aws-cdk-lib';
 
 function getEnv(): string {
   return process.env.AWS_BRANCH || 'dev';
@@ -49,6 +49,7 @@ export function createCognitoUserPool(scope: Construct): {
       phone: false,
     },
     enableSmsRole: false,
+    removalPolicy: RemovalPolicy.DESTROY,
   });
 
   applyTags(userPool);

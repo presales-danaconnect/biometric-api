@@ -1,4 +1,4 @@
-import { Stack } from 'aws-cdk-lib';
+import { Stack, RemovalPolicy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
   Table,
@@ -55,6 +55,7 @@ export function createChannelsTable(scope: Construct): Table {
     },
     billingMode: BillingMode.PAY_PER_REQUEST,
     stream: StreamViewType.NEW_AND_OLD_IMAGES,
+    removalPolicy: RemovalPolicy.DESTROY,
   });
 
   // Apply tags
@@ -82,6 +83,7 @@ export function createCircuitsTable(scope: Construct): Table {
     },
     billingMode: BillingMode.PAY_PER_REQUEST,
     stream: StreamViewType.NEW_AND_OLD_IMAGES,
+    removalPolicy: RemovalPolicy.DESTROY,
   });
 
   // Create GSI for querying circuits by channel_id
