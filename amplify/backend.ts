@@ -4,6 +4,8 @@ import { createChannelsTable, createCircuitsTable } from './data/resource';
 import { createApiGateway, ApiLambdaFunctions } from './api/resource';
 import { createAdminCreateClientFunction } from './functions/fn-admin-create-client/resource';
 import { createAdminCreateChannelFunction } from './functions/fn-admin-create-channel/resource';
+import { createAdminGetChannelFunction } from './functions/fn-admin-get-channel/resource';
+import { createAdminUpdateChannelFunction } from './functions/fn-admin-update-channel/resource';
 import { Stack, Tags } from 'aws-cdk-lib';
 
 const backend = defineBackend({});
@@ -31,11 +33,21 @@ const fnAdminCreateChannel = createAdminCreateChannelFunction(
   backend.stack,
   channelsTable
 );
+const fnAdminGetChannel = createAdminGetChannelFunction(
+  backend.stack,
+  channelsTable
+);
+const fnAdminUpdateChannel = createAdminUpdateChannelFunction(
+  backend.stack,
+  channelsTable
+);
 
 // Create API Gateway with Lambda integrations
 const lambdas: ApiLambdaFunctions = {
   adminClientsCreate: fnAdminCreateClient,
   adminChannelsCreate: fnAdminCreateChannel,
+  adminChannelsGet: fnAdminGetChannel,
+  adminChannelsUpdate: fnAdminUpdateChannel,
 };
 
 const apiGateway = createApiGateway(backend.stack, {
@@ -62,5 +74,7 @@ backend.addOutput({
     // Lambda function names
     fnAdminCreateClientName: fnAdminCreateClient.functionName,
     fnAdminCreateChannelName: fnAdminCreateChannel.functionName,
+    fnAdminGetChannelName: fnAdminGetChannel.functionName,
+    fnAdminUpdateChannelName: fnAdminUpdateChannel.functionName,
   },
 });
