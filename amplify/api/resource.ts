@@ -76,7 +76,7 @@ export function createApiGateway(
   // Create CfnAuthorizer for Cognito user pool
   const cfnAuthorizer = new CfnAuthorizer(scope, 'BiometricCognitoAuthorizer', {
     restApiId: api.restApiId,
-    name: `biometric-api-${env}-authorizer`,
+    name: `biometric-api-${env}-cognito-auth`,
     type: 'COGNITO_USER_POOLS',
     identitySource: 'method.request.header.Authorization',
     providerArns: [config.userPool.userPoolArn],
