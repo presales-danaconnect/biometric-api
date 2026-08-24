@@ -173,7 +173,7 @@ export function createApiGateway(
   // Force deployment to depend on authorizer
   const cfnDeployment = api.latestDeployment?.node.defaultChild as CfnDeployment;
   if (cfnDeployment) {
-    cfnDeployment.addDependency(cfnAuthorizer.node.defaultChild as CfnResource);
+    cfnDeployment.addDependency(cfnAuthorizer);
   }
 
   const apiGatewayUrl = `https://${api.restApiId}.execute-api.${config.region}.amazonaws.com/${env}`;
