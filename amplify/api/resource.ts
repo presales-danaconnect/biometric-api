@@ -1,4 +1,4 @@
-import { Duration, Tags, CfnOutput } from 'aws-cdk-lib';
+import { Duration, Tags } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import {
   RestApi,
@@ -43,12 +43,6 @@ function safeIntegration(lambda?: IFunction): LambdaIntegration | undefined {
   return lambda ? new LambdaIntegration(lambda) : undefined;
 }
 
-function noAuthOptions(): MethodOptions {
-  return {
-    authorizationType: AuthorizationType.NONE,
-  };
-}
-
 export function createApiGateway(
   scope: Construct,
   config: ApiGatewayConfig,
@@ -68,6 +62,7 @@ export function createApiGateway(
       maxAge: Duration.hours(1),
     },
     deployOptions: {
+      stageName: env,
       throttlingRateLimit: 100,
       throttlingBurstLimit: 200,
     },
@@ -76,7 +71,7 @@ export function createApiGateway(
   Tags.of(api).add('Project', 'biometric-api');
   Tags.of(api).add('Environment', env);
 
-  // Authorizer must be created after RestApi and attached to it
+  // Create Cognito authorizer
   const cognitoAuthorizer = new CognitoUserPoolsAuthorizer(
     scope,
     'BiometricCognitoAuthorizer',
@@ -87,22 +82,30 @@ export function createApiGateway(
       resultsCacheTtl: Duration.minutes(5),
     }
   );
+
+  // Attach authorizer to API before creating methods
   cognitoAuthorizer._attachToApi(api);
 
-  const cognitoOptions = (authorizer: CognitoUserPoolsAuthorizer): MethodOptions => ({
+  // Cognito authorizer options
+  const cognitoOptions: MethodOptions = {
     authorizationType: AuthorizationType.COGNITO,
-    authorizer,
-  });
+    authorizer: cognitoAuthorizer,
+  };
+
+  // No auth options for admin endpoints
+  const noAuthOptions: MethodOptions = {
+    authorizationType: AuthorizationType.NONE,
+  };
 
   // POST /oauth2/token
   const oauthResource = api.root.addResource('oauth2');
   const tokenResource = oauthResource.addResource('token');
   const oauthIntegration = safeIntegration(lambdas?.oauthToken);
   if (oauthIntegration) {
-    tokenResource.addMethod('POST', oauthIntegration, noAuthOptions());
+    tokenResource.addMethod('POST', oauthIntegration, noAuthOptions);
   }
 
-  // /api (recurso compartido)
+  // /api
   const apiResource: IResource = api.root.addResource('api');
 
   // /api/biometric
@@ -114,7 +117,7 @@ export function createApiGateway(
     biometricResource
       .addResource('get_config')
       .addResource('{circuit_id}')
-      .addMethod('GET', getConfigIntegration, cognitoOptions(cognitoAuthorizer));
+      .addMethod('GET', getConfigIntegration, cognitoOptions);
   }
 
   // POST /api/biometric/start_circuit/{channel_id}
@@ -123,7 +126,7 @@ export function createApiGateway(
     biometricResource
       .addResource('start_circuit')
       .addResource('{channel_id}')
-      .addMethod('POST', startCircuitIntegration, cognitoOptions(cognitoAuthorizer));
+      .addMethod('POST', startCircuitIntegration, cognitoOptions);
   }
 
   // POST /api/biometric/process_circuit/{circuit_id}
@@ -132,7 +135,7 @@ export function createApiGateway(
     biometricResource
       .addResource('process_circuit')
       .addResource('{circuit_id}')
-      .addMethod('POST', processCircuitIntegration, cognitoOptions(cognitoAuthorizer));
+      .addMethod('POST', processCircuitIntegration, cognitoOptions);
   }
 
   // /api/admin
@@ -144,7 +147,7 @@ export function createApiGateway(
     adminResource
       .addResource('clients')
       .addResource('create')
-      .addMethod('POST', adminClientsCreateIntegration, noAuthOptions());
+      .addMethod('POST', adminClientsCreateIntegration, noAuthOptions);
   }
 
   // /api/admin/channels
@@ -153,7 +156,7 @@ export function createApiGateway(
   // POST /api/admin/channels
   const adminChannelsCreateIntegration = safeIntegration(lambdas?.adminChannelsCreate);
   if (adminChannelsCreateIntegration) {
-    channelsResource.addMethod('POST', adminChannelsCreateIntegration, noAuthOptions());
+    channelsResource.addMethod('POST', adminChannelsCreateIntegration, noAuthOptions);
   }
 
   // /api/admin/channels/{id}
@@ -162,26 +165,16 @@ export function createApiGateway(
   // GET /api/admin/channels/{id}
   const adminChannelsGetIntegration = safeIntegration(lambdas?.adminChannelsGet);
   if (adminChannelsGetIntegration) {
-    channelIdResource.addMethod('GET', adminChannelsGetIntegration, noAuthOptions());
+    channelIdResource.addMethod('GET', adminChannelsGetIntegration, noAuthOptions);
   }
 
   // PUT /api/admin/channels/{id}
   const adminChannelsUpdateIntegration = safeIntegration(lambdas?.adminChannelsUpdate);
   if (adminChannelsUpdateIntegration) {
-    channelIdResource.addMethod('PUT', adminChannelsUpdateIntegration, noAuthOptions());
+    channelIdResource.addMethod('PUT', adminChannelsUpdateIntegration, noAuthOptions);
   }
 
   const apiGatewayUrl = `https://${api.restApiId}.execute-api.${config.region}.amazonaws.com/${env}`;
-
-  new CfnOutput(scope, 'ApiGatewayUrl', {
-    value: apiGatewayUrl,
-    description: 'API Gateway URL',
-  });
-
-  new CfnOutput(scope, 'ApiGatewayId', {
-    value: api.restApiId,
-    description: 'API Gateway ID',
-  });
 
   return {
     apiGatewayUrl,
