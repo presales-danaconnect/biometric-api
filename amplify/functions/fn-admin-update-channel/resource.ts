@@ -27,13 +27,18 @@ export function createAdminUpdateChannelFunction(
     },
   });
 
-  // Add IAM permissions for DynamoDB
-  channelsTable.grantWriteData(fn);
+  fn.addToRolePolicy(
+    new PolicyStatement({
+      actions: [
+        'dynamodb:GetItem',
+        'dynamodb:UpdateItem',
+      ],
+      resources: [channelsTable.tableArn],
+    })
+  );
 
-  // Apply tags
   Tags.of(fn).add('Project', 'biometric-api');
   Tags.of(fn).add('Environment', env);
-  Tags.of(fn).add('Owner', 'danaconnect');
 
   return fn;
 }
