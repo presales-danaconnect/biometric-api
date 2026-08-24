@@ -65,6 +65,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       UserPoolId: userPoolId,
       ClientName: clientName,
       GenerateSecret: true,
+      AllowedOAuthFlowsUserPoolClient: true,
       AllowedOAuthFlows: ['client_credentials'],
       AllowedOAuthScopes: [
         'biometric-danaconnect/start_circuit',
