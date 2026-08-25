@@ -29,6 +29,7 @@ export interface ApiLambdaFunctions {
   getConfig?: IFunction;
   startCircuit?: IFunction;
   processCircuit?: IFunction;
+  uploadUrl?: IFunction;
   adminClientsCreate?: IFunction;
   adminChannelsCreate?: IFunction;
   adminChannelsGet?: IFunction;
@@ -134,6 +135,19 @@ export function createApiGateway(
       .addResource('process_circuit')
       .addResource('{circuit_id}')
       .addMethod('POST', processCircuitIntegration, {
+        authorizationType: AuthorizationType.COGNITO,
+        authorizer: { authorizerId: cfnAuthorizer.ref },
+        authorizationScopes: ['biometric-danaconnect/start_circuit'],
+      });
+  }
+
+  // GET /api/biometric/upload-url/{circuit_id} - requires 'start_circuit' scope
+  const uploadUrlIntegration = safeIntegration(lambdas?.uploadUrl);
+  if (uploadUrlIntegration) {
+    biometricResource
+      .addResource('upload-url')
+      .addResource('{circuit_id}')
+      .addMethod('GET', uploadUrlIntegration, {
         authorizationType: AuthorizationType.COGNITO,
         authorizer: { authorizerId: cfnAuthorizer.ref },
         authorizationScopes: ['biometric-danaconnect/start_circuit'],

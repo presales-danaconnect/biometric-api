@@ -8,6 +8,8 @@ import { createAdminGetChannelFunction } from './functions/fn-admin-get-channel/
 import { createAdminUpdateChannelFunction } from './functions/fn-admin-update-channel/resource';
 import { createGetConfigFunction } from './functions/fn-get-config/resource';
 import { createStartCircuitFunction } from './functions/fn-start-circuit/resource';
+import { createUploadUrlFunction } from './functions/fn-upload-url/resource';
+import { createDocumentsBucket } from './storage/resource';
 import { Stack, Tags } from 'aws-cdk-lib';
 
 const backend = defineBackend({});
@@ -18,6 +20,9 @@ const region = Stack.of(backend.stack).region;
 // Create DynamoDB tables
 const channelsTable = createChannelsTable(backend.stack);
 const circuitsTable = createCircuitsTable(backend.stack);
+
+// Create S3 bucket for documents
+const { bucket: documentsBucket, bucketName } = createDocumentsBucket(backend.stack);
 
 // Create Cognito User Pool for machine-to-machine auth
 const { userPool, userPoolDomain, userPoolClient } = createCognitoUserPool(
@@ -55,6 +60,12 @@ const fnStartCircuit = createStartCircuitFunction(
   circuitsTable,
   channelsTable
 );
+const fnUploadUrl = createUploadUrlFunction(
+  backend.stack,
+  documentsBucket,
+  circuitsTable,
+  channelsTable
+);
 
 // Create API Gateway with Lambda integrations
 const lambdas: ApiLambdaFunctions = {
@@ -64,6 +75,7 @@ const lambdas: ApiLambdaFunctions = {
   adminChannelsUpdate: fnAdminUpdateChannel,
   getConfig: fnGetConfig,
   startCircuit: fnStartCircuit,
+  uploadUrl: fnUploadUrl,
 };
 
 const apiGateway = createApiGateway(backend.stack, {
@@ -78,6 +90,8 @@ backend.addOutput({
     // DynamoDB table names
     channelsTableName: channelsTable.tableName,
     circuitsTableName: circuitsTable.tableName,
+    // S3 bucket
+    documentsBucketName: bucketName,
     // Cognito configuration
     userPoolId: userPool.userPoolId,
     userPoolDomain: userPoolDomain,
@@ -94,5 +108,6 @@ backend.addOutput({
     fnAdminUpdateChannelName: fnAdminUpdateChannel.functionName,
     fnGetConfigName: fnGetConfig.functionName,
     fnStartCircuitName: fnStartCircuit.functionName,
+    fnUploadUrlName: fnUploadUrl.functionName,
   },
 });
