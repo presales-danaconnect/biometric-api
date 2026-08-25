@@ -1,3 +1,6 @@
 {
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/s3-request-presigner": "^3.1118.0"
+  }
 }
