@@ -30,14 +30,10 @@ export function createCognitoUserPool(scope: Construct): {
   const domainPrefix = `biometric-api-${env}`;
   const resourceServerIdentifier = 'biometric-danaconnect';
 
-  const startCircuitScope = new ResourceServerScope({
-    scopeName: 'start_circuit',
-    scopeDescription: 'Create and start biometric circuits',
-  });
-
-  const readScope = new ResourceServerScope({
-    scopeName: 'read',
-    scopeDescription: 'Read biometric configuration and status',
+  // Single scope for full access to biometric API
+  const accessScope = new ResourceServerScope({
+    scopeName: 'access',
+    scopeDescription: 'Full access to biometric API',
   });
 
   const userPool = new UserPool(scope, 'UserPool', {
@@ -57,7 +53,7 @@ export function createCognitoUserPool(scope: Construct): {
   const resourceServer = new UserPoolResourceServer(scope, 'ResourceServer', {
     identifier: resourceServerIdentifier,
     userPool: userPool,
-    scopes: [startCircuitScope, readScope],
+    scopes: [accessScope],
   });
 
   applyTags(resourceServer);
@@ -78,8 +74,7 @@ export function createCognitoUserPool(scope: Construct): {
         clientCredentials: true,
       },
       scopes: [
-        OAuthScope.resourceServer(resourceServer, startCircuitScope),
-        OAuthScope.resourceServer(resourceServer, readScope),
+        OAuthScope.resourceServer(resourceServer, accessScope),
       ],
       callbackUrls: [],
       logoutUrls: [],

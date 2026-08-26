@@ -88,6 +88,13 @@ export function createApiGateway(
     authorizationType: AuthorizationType.NONE,
   };
 
+  // Cognito auth options with single scope
+  const cognitoAuthOptions = (): MethodOptions => ({
+    authorizationType: AuthorizationType.COGNITO,
+    authorizer: { authorizerId: cfnAuthorizer.ref },
+    authorizationScopes: ['biometric-danaconnect/access'],
+  });
+
   // POST /oauth2/token
   const oauthResource = api.root.addResource('oauth2');
   const tokenResource = oauthResource.addResource('token');
@@ -102,56 +109,40 @@ export function createApiGateway(
   // /api/biometric
   const biometricResource = apiResource.addResource('biometric');
 
-  // GET /api/biometric/get_config/{circuit_id} - requires 'read' scope
+  // GET /api/biometric/get_config/{circuit_id}
   const getConfigIntegration = safeIntegration(lambdas?.getConfig);
   if (getConfigIntegration) {
     biometricResource
       .addResource('get_config')
       .addResource('{circuit_id}')
-      .addMethod('GET', getConfigIntegration, {
-        authorizationType: AuthorizationType.COGNITO,
-        authorizer: { authorizerId: cfnAuthorizer.ref },
-        authorizationScopes: ['biometric-danaconnect/read'],
-      });
+      .addMethod('GET', getConfigIntegration, cognitoAuthOptions());
   }
 
-  // POST /api/biometric/start_circuit/{channel_id} - requires 'start_circuit' scope
+  // POST /api/biometric/start_circuit/{channel_id}
   const startCircuitIntegration = safeIntegration(lambdas?.startCircuit);
   if (startCircuitIntegration) {
     biometricResource
       .addResource('start_circuit')
       .addResource('{channel_id}')
-      .addMethod('POST', startCircuitIntegration, {
-        authorizationType: AuthorizationType.COGNITO,
-        authorizer: { authorizerId: cfnAuthorizer.ref },
-        authorizationScopes: ['biometric-danaconnect/start_circuit'],
-      });
+      .addMethod('POST', startCircuitIntegration, cognitoAuthOptions());
   }
 
-  // POST /api/biometric/process_circuit/{circuit_id} - requires 'start_circuit' scope
+  // POST /api/biometric/process_circuit/{circuit_id}
   const processCircuitIntegration = safeIntegration(lambdas?.processCircuit);
   if (processCircuitIntegration) {
     biometricResource
       .addResource('process_circuit')
       .addResource('{circuit_id}')
-      .addMethod('POST', processCircuitIntegration, {
-        authorizationType: AuthorizationType.COGNITO,
-        authorizer: { authorizerId: cfnAuthorizer.ref },
-        authorizationScopes: ['biometric-danaconnect/start_circuit'],
-      });
+      .addMethod('POST', processCircuitIntegration, cognitoAuthOptions());
   }
 
-  // GET /api/biometric/upload-url/{circuit_id} - requires 'start_circuit' scope
+  // GET /api/biometric/upload-url/{circuit_id}
   const uploadUrlIntegration = safeIntegration(lambdas?.uploadUrl);
   if (uploadUrlIntegration) {
     biometricResource
       .addResource('upload-url')
       .addResource('{circuit_id}')
-      .addMethod('GET', uploadUrlIntegration, {
-        authorizationType: AuthorizationType.COGNITO,
-        authorizer: { authorizerId: cfnAuthorizer.ref },
-        authorizationScopes: ['biometric-danaconnect/start_circuit'],
-      });
+      .addMethod('GET', uploadUrlIntegration, cognitoAuthOptions());
   }
 
   // /api/admin
