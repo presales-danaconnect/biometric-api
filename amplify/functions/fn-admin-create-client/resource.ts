@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Tags } from 'aws-cdk-lib';
 
@@ -25,18 +25,19 @@ export function createAdminCreateClientFunction(
     },
   });
 
-  // Add IAM permissions for Cognito
   fn.addToRolePolicy(
     new PolicyStatement({
-      actions: ['cognito-idp:CreateUserPoolClient', 'cognito-idp:DescribeUserPoolClient'],
-      resources: ['*'], // Will be scoped to specific user pool in production
+      actions: [
+        'cognito-idp:CreateUserPoolClient',
+        'cognito-idp:DescribeUserPoolClient',
+        'cognito-idp:ListUserPoolClients',
+      ],
+      resources: ['*'],
     })
   );
 
-  // Apply tags
   Tags.of(fn).add('Project', 'biometric-api');
   Tags.of(fn).add('Environment', env);
-  Tags.of(fn).add('Owner', 'danaconnect');
 
   return fn;
 }
