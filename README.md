@@ -96,8 +96,8 @@ Content-Type: application/json
 **Body:**
 ```json
 {
-  "code_client": "cliente001",
-  "username": "admin@cliente.com"
+  "code_client": "company",
+  "username": "soportedana"
 }
 ```
 
@@ -125,8 +125,8 @@ Content-Type: application/json
 ```json
 {
   "id_client": 123,
-  "code_client": "cliente001",
-  "username": "admin@cliente.com",
+  "code_client": "company",
+  "username": "soportedana",
   "name": "Verificación de identidad",
   "channel_type": "biometric",
   "settings": {
