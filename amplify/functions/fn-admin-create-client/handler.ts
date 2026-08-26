@@ -1,5 +1,9 @@
 import type { APIGatewayProxyHandler } from 'aws-lambda';
-import { CognitoIdentityProviderClient, CreateUserPoolClientCommand } from '@aws-sdk/client-cognito-identity-provider';
+import {
+  CognitoIdentityProviderClient,
+  CreateUserPoolClientCommand,
+  ListUserPoolClientsCommand,
+} from '@aws-sdk/client-cognito-identity-provider';
 
 const cognitoClient = new CognitoIdentityProviderClient({});
 
@@ -8,17 +12,7 @@ interface CreateClientRequest {
   username: string;
 }
 
-interface CreateClientResponse {
-  clientId: string;
-  clientSecret: string;
-}
-
-interface ErrorResponse {
-  statusCode: number;
-  body: string;
-}
-
-function errorResponse(statusCode: number, message: string): ErrorResponse {
+function errorResponse(statusCode: number, message: string) {
   return {
     statusCode,
     body: JSON.stringify({ error: message }),
@@ -27,18 +21,12 @@ function errorResponse(statusCode: number, message: string): ErrorResponse {
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
-    // Validate x-admin-key header
     const adminKey = event.headers['x-admin-key'] || event.headers['X-Admin-Key'];
-    const expectedAdminKey = process.env.ADMIN_KEY;
-
-    if (!adminKey || adminKey !== expectedAdminKey) {
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
       return errorResponse(401, 'Unauthorized: Missing or invalid x-admin-key header');
     }
 
-    // Parse request body
-    if (!event.body) {
-      return errorResponse(400, 'Missing request body');
-    }
+    if (!event.body) return errorResponse(400, 'Missing request body');
 
     let body: CreateClientRequest;
     try {
@@ -48,45 +36,57 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const { code_client, username } = body;
-
     if (!code_client || !username) {
       return errorResponse(400, 'Missing required fields: code_client, username');
     }
 
     const userPoolId = process.env.USER_POOL_ID;
-    if (!userPoolId) {
-      return errorResponse(500, 'Missing USER_POOL_ID environment variable');
-    }
+    if (!userPoolId) return errorResponse(500, 'Missing USER_POOL_ID environment variable');
 
-    // Create App Client in Cognito User Pool
     const clientName = `${code_client}-client`;
 
-    const createClientCommand = new CreateUserPoolClientCommand({
-      UserPoolId: userPoolId,
-      ClientName: clientName,
-      GenerateSecret: true,
-      AllowedOAuthFlowsUserPoolClient: true,
-      AllowedOAuthFlows: ['client_credentials'],
-      AllowedOAuthScopes: [
-        'biometric-danaconnect/access',
-      ],
-      SupportedIdentityProviders: [],
-    });
+    // Verificar si ya existe un App Client con ese nombre
+    const listResponse = await cognitoClient.send(
+      new ListUserPoolClientsCommand({
+        UserPoolId: userPoolId,
+        MaxResults: 60,
+      })
+    );
 
-    const createClientResponse = await cognitoClient.send(createClientCommand);
+    const existing = listResponse.UserPoolClients?.find(
+      (c) => c.ClientName === clientName
+    );
 
-    if (!createClientResponse.UserPoolClient?.ClientId || !createClientResponse.UserPoolClient?.ClientSecret) {
+    if (existing) {
+      return errorResponse(
+        409,
+        `Client '${clientName}' already exists. Delete it first if you need new credentials.`
+      );
+    }
+
+    // Crear App Client
+    const createResponse = await cognitoClient.send(
+      new CreateUserPoolClientCommand({
+        UserPoolId: userPoolId,
+        ClientName: clientName,
+        GenerateSecret: true,
+        AllowedOAuthFlowsUserPoolClient: true,
+        AllowedOAuthFlows: ['client_credentials'],
+        AllowedOAuthScopes: ['biometric-danaconnect/access'],
+        SupportedIdentityProviders: ['COGNITO'],
+      })
+    );
+
+    if (!createResponse.UserPoolClient?.ClientId || !createResponse.UserPoolClient?.ClientSecret) {
       return errorResponse(500, 'Failed to create Cognito App Client');
     }
 
-    const response: CreateClientResponse = {
-      clientId: createClientResponse.UserPoolClient.ClientId,
-      clientSecret: createClientResponse.UserPoolClient.ClientSecret,
-    };
-
     return {
       statusCode: 201,
-      body: JSON.stringify(response),
+      body: JSON.stringify({
+        clientId: createResponse.UserPoolClient.ClientId,
+        clientSecret: createResponse.UserPoolClient.ClientSecret,
+      }),
     };
   } catch (error) {
     console.error('Error creating client:', error);
