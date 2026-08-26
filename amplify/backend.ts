@@ -9,6 +9,7 @@ import { createAdminUpdateChannelFunction } from './functions/fn-admin-update-ch
 import { createGetConfigFunction } from './functions/fn-get-config/resource';
 import { createStartCircuitFunction } from './functions/fn-start-circuit/resource';
 import { createUploadUrlFunction } from './functions/fn-upload-url/resource';
+import { createProcessCircuitFunction } from './functions/fn-process-circuit/resource';
 import { createDocumentsBucket } from './storage/resource';
 import { Stack, Tags } from 'aws-cdk-lib';
 
@@ -66,6 +67,12 @@ const fnUploadUrl = createUploadUrlFunction(
   circuitsTable,
   channelsTable
 );
+const fnProcessCircuit = createProcessCircuitFunction(
+  backend.stack,
+  documentsBucket,
+  circuitsTable,
+  channelsTable
+);
 
 // Create API Gateway with Lambda integrations
 const lambdas: ApiLambdaFunctions = {
@@ -76,6 +83,7 @@ const lambdas: ApiLambdaFunctions = {
   getConfig: fnGetConfig,
   startCircuit: fnStartCircuit,
   uploadUrl: fnUploadUrl,
+  processCircuit: fnProcessCircuit,
 };
 
 const apiGateway = createApiGateway(backend.stack, {
@@ -109,5 +117,6 @@ backend.addOutput({
     fnGetConfigName: fnGetConfig.functionName,
     fnStartCircuitName: fnStartCircuit.functionName,
     fnUploadUrlName: fnUploadUrl.functionName,
+    fnProcessCircuitName: fnProcessCircuit.functionName,
   },
 });
