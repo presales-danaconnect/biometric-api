@@ -79,16 +79,17 @@ interface GetConfigResponse {
   thresholds: Thresholds;
 }
 
-interface ErrorResponse {
-  statusCode: number;
-  body: string;
-}
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type,x-internal-key',
   'Content-Type': 'application/json',
 };
+
+interface ErrorResponse {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+}
 
 function errorResponse(statusCode: number, message: string): ErrorResponse {
   return {
