@@ -7,7 +7,7 @@ interface Endpoint {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   path: string
   description: string
-  auth: 'none' | 'bearer' | 'admin'
+  auth: 'none' | 'bearer' | 'admin' | 'internal'
   headers?: { name: string; required: boolean; value: string }[]
   params?: { name: string; type: string; required: boolean; description: string }[]
   body?: object
@@ -447,7 +447,8 @@ function App() {
                   <span className="endpoint-path">{endpoint.path}</span>
                   <span className="endpoint-description">{endpoint.description}</span>
                   <span className={`auth-badge ${endpoint.auth}`}>
-                    {endpoint.auth === 'none' ? '🔓 Público' : ''}
+                    {endpoint.auth === 'none' ? (endpoint.id === 'oauth2-token' ? '🔑 client_id + client_secret' : '🔓 Público') : ''}
+                    {endpoint.auth === 'internal' ? '🔐 x-internal-key' : ''}
                   </span>
                   <span className="endpoint-toggle">▼</span>
                 </div>
@@ -617,7 +618,7 @@ function App() {
                 </span>
                 <span className="endpoint-path">{endpoint.path}</span>
                 <span className="endpoint-description">{endpoint.description}</span>
-                <span className={`auth-badge bearer`}>🔐 x-internal-key</span>
+                <span className={`auth-badge internal`}>🔐 x-internal-key</span>
                 <span className="endpoint-toggle">▼</span>
               </div>
               <div className="endpoint-details">

@@ -307,6 +307,11 @@
   color: var(--text-muted);
 }
 
+.auth-badge.internal {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
 /* Parameters Table */
 .params-table {
   width: 100%;
