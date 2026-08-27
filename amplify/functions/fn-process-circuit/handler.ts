@@ -338,6 +338,12 @@ async function callWebhook(webhookUrl: string, circuit: CircuitItem, channel: Ch
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
+    // Validate x-internal-key header
+    const internalKey = event.headers['x-internal-key'] || event.headers['X-Internal-Key'];
+    if (!internalKey || internalKey !== process.env.INTERNAL_KEY) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+    }
+
     const circuitId = event.pathParameters?.circuit_id;
     if (!circuitId) {
       return errorResponse(400, 'Missing circuit ID in path');

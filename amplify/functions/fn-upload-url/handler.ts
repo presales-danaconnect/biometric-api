@@ -47,6 +47,12 @@ function errorResponse(statusCode: number, message: string): ErrorResponse {
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   try {
+    // Validate x-internal-key header
+    const internalKey = event.headers['x-internal-key'] || event.headers['X-Internal-Key'];
+    if (!internalKey || internalKey !== process.env.INTERNAL_KEY) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+    }
+
     // Get circuit_id from path parameters
     const circuitId = event.pathParameters?.circuit_id;
 

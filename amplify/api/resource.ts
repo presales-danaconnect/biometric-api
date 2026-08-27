@@ -60,7 +60,7 @@ export function createApiGateway(
     defaultCorsPreflightOptions: {
       allowOrigins: ['*'],
       allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key'],
+      allowHeaders: ['Content-Type', 'Authorization', 'x-admin-key', 'x-internal-key'],
       allowCredentials: false,
       maxAge: Duration.hours(1),
     },
@@ -83,12 +83,12 @@ export function createApiGateway(
     providerArns: [config.userPool.userPoolArn],
   });
 
-  // No auth options for admin endpoints
+  // No auth options for admin and frontend endpoints
   const noAuthOptions: MethodOptions = {
     authorizationType: AuthorizationType.NONE,
   };
 
-  // Cognito auth options with single scope
+  // Cognito auth options for backend endpoints (start_circuit)
   const cognitoAuthOptions = (): MethodOptions => ({
     authorizationType: AuthorizationType.COGNITO,
     authorizer: { authorizerId: cfnAuthorizer.ref },
@@ -109,13 +109,13 @@ export function createApiGateway(
   // /api/biometric
   const biometricResource = apiResource.addResource('biometric');
 
-  // GET /api/biometric/get_config/{circuit_id}
+  // GET /api/biometric/get_config/{circuit_id} - Frontend endpoint, uses x-internal-key
   const getConfigIntegration = safeIntegration(lambdas?.getConfig);
   if (getConfigIntegration) {
     biometricResource
       .addResource('get_config')
       .addResource('{circuit_id}')
-      .addMethod('GET', getConfigIntegration, cognitoAuthOptions());
+      .addMethod('GET', getConfigIntegration, noAuthOptions);
   }
 
   // POST /api/biometric/start_circuit/{channel_id}
@@ -127,22 +127,22 @@ export function createApiGateway(
       .addMethod('POST', startCircuitIntegration, cognitoAuthOptions());
   }
 
-  // POST /api/biometric/process_circuit/{circuit_id}
+  // POST /api/biometric/process_circuit/{circuit_id} - Frontend endpoint, uses x-internal-key
   const processCircuitIntegration = safeIntegration(lambdas?.processCircuit);
   if (processCircuitIntegration) {
     biometricResource
       .addResource('process_circuit')
       .addResource('{circuit_id}')
-      .addMethod('POST', processCircuitIntegration, cognitoAuthOptions());
+      .addMethod('POST', processCircuitIntegration, noAuthOptions);
   }
 
-  // GET /api/biometric/upload-url/{circuit_id}
+  // GET /api/biometric/upload-url/{circuit_id} - Frontend endpoint, uses x-internal-key
   const uploadUrlIntegration = safeIntegration(lambdas?.uploadUrl);
   if (uploadUrlIntegration) {
     biometricResource
       .addResource('upload-url')
       .addResource('{circuit_id}')
-      .addMethod('GET', uploadUrlIntegration, cognitoAuthOptions());
+      .addMethod('GET', uploadUrlIntegration, noAuthOptions);
   }
 
   // /api/admin

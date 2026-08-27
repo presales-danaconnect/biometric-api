@@ -25,6 +25,7 @@ export function createGetConfigFunction(
     environment: {
       CIRCUITS_TABLE_NAME: circuitsTable.tableName,
       CHANNELS_TABLE_NAME: channelsTable.tableName,
+      INTERNAL_KEY: process.env.INTERNAL_KEY || '',
     },
   });
 

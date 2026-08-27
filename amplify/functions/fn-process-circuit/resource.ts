@@ -31,6 +31,7 @@ export function createProcessCircuitFunction(
       BEDROCK_MODEL_ID: 'anthropic.claude-sonnet-4-5-20250929-v1:0',
       LIVENESS_THRESHOLD: '80',
       COMPARE_FACES_THRESHOLD: '80',
+      INTERNAL_KEY: process.env.INTERNAL_KEY || '',
     },
   });
 
