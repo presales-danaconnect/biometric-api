@@ -115,9 +115,16 @@ interface ErrorResponse {
   body: string;
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,x-internal-key',
+  'Content-Type': 'application/json',
+};
+
 function errorResponse(statusCode: number, message: string): ErrorResponse {
   return {
     statusCode,
+    headers: corsHeaders,
     body: JSON.stringify({ error: message }),
   };
 }
@@ -341,7 +348,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Validate x-internal-key header
     const internalKey = event.headers['x-internal-key'] || event.headers['X-Internal-Key'];
     if (!internalKey || internalKey !== process.env.INTERNAL_KEY) {
-      return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
+      return { statusCode: 401, headers: corsHeaders, body: JSON.stringify({ error: 'Unauthorized' }) };
     }
 
     const circuitId = event.pathParameters?.circuit_id;
@@ -547,6 +554,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify(response),
     };
   } catch (error) {
