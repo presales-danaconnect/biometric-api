@@ -23,7 +23,7 @@ const channelSettings = {
   projectId: '201208',
   redirectUrl: 'https://app.digicert.com/result',
   ui: {
-    headerTitle: 'Verificación de identidad',
+    headerTitle: 'Identity Verification',
     headerLogoUrl: 'https://cdn.digicert.com/logo.png',
     bgColor: '#FCFCFC',
     footerPrivacyPolicyUrl: 'https://digicert.com/privacy',
@@ -114,7 +114,7 @@ const endpoints: Endpoint[] = [
     id: 'oauth2-token',
     method: 'POST',
     path: '/oauth2/token',
-    description: 'Obtiene un access token de Cognito mediante el flujo Client Credentials',
+    description: 'Obtains an access token from Cognito using the Client Credentials flow',
     auth: 'none',
     headers: [
       { name: 'Content-Type', required: true, value: 'application/x-www-form-urlencoded' }
@@ -142,7 +142,7 @@ const endpoints: Endpoint[] = [
     id: 'admin-clients-create',
     method: 'POST',
     path: '/api/admin/clients/create',
-    description: 'Crea un App Client de Cognito para un cliente empresarial',
+    description: 'Creates a Cognito App Client for an enterprise client',
     auth: 'admin',
     headers: [
       { name: 'x-admin-key', required: true, value: '<ADMIN_KEY>' },
@@ -165,7 +165,7 @@ const endpoints: Endpoint[] = [
     id: 'admin-channels-create',
     method: 'POST',
     path: '/api/admin/channels',
-    description: 'Crea un canal de verificación biométrica con su configuración',
+    description: 'Creates a biometric verification channel with its configuration',
     auth: 'admin',
     headers: [
       { name: 'x-admin-key', required: true, value: '<ADMIN_KEY>' },
@@ -175,7 +175,7 @@ const endpoints: Endpoint[] = [
       id_client: 123,
       code_client: 'cliente001',
       username: 'admin@cliente.com',
-      name: 'Verificación de identidad',
+      name: 'Identity Verification',
       channel_type: 'biometric',
       settings: channelSettings
     },
@@ -186,19 +186,19 @@ const endpoints: Endpoint[] = [
     curl: `curl -X POST "https://api.biometric.danaconnect.com/api/admin/channels" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
-  -d '{"id_client": 123, "code_client": "cliente001", "name": "Verificación", "settings": {...}}'`
+  -d '{"id_client": 123, "code_client": "cliente001", "name": "Verification", "settings": {...}}'`
   },
   {
     id: 'admin-channels-get',
     method: 'GET',
     path: '/api/admin/channels/{id}',
-    description: 'Obtiene la configuración completa de un canal',
+    description: 'Gets the complete configuration of a channel',
     auth: 'admin',
     headers: [
       { name: 'x-admin-key', required: true, value: '<ADMIN_KEY>' }
     ],
     params: [
-      { name: 'id', type: 'uuid', required: true, description: 'ID del canal' }
+      { name: 'id', type: 'uuid', required: true, description: 'Channel ID' }
     ],
     response: {
       channel_id: '550e8400-e29b-41d4-a716-446655440000',
@@ -212,17 +212,17 @@ const endpoints: Endpoint[] = [
     id: 'admin-channels-update',
     method: 'PUT',
     path: '/api/admin/channels/{id}',
-    description: 'Actualiza la configuración de un canal con deep merge',
+    description: 'Updates a channel configuration with deep merge',
     auth: 'admin',
     headers: [
       { name: 'x-admin-key', required: true, value: '<ADMIN_KEY>' },
       { name: 'Content-Type', required: true, value: 'application/json' }
     ],
     params: [
-      { name: 'id', type: 'uuid', required: true, description: 'ID del canal' }
+      { name: 'id', type: 'uuid', required: true, description: 'Channel ID' }
     ],
     body: {
-      name: 'Verificación actualizada',
+      name: 'Updated Verification',
       settings: {
         thresholds: {
           livenessConfidenceThreshold: 85
@@ -231,27 +231,27 @@ const endpoints: Endpoint[] = [
     },
     response: {
       channel_id: '550e8400-e29b-41d4-a716-446655440000',
-      name: 'Verificación actualizada',
+      name: 'Updated Verification',
       settings: channelSettings
     },
     curl: `curl -X PUT "https://api.biometric.danaconnect.com/api/admin/channels/550e8400-e29b-41d4-a716-446655440000" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "Verificación actualizada", "settings": {"thresholds": {"livenessConfidenceThreshold": 85}}}'`
+  -d '{"name": "Updated Verification", "settings": {"thresholds": {"livenessConfidenceThreshold": 85}}}'`
   },
   // Biometric
   {
     id: 'start-circuit',
     method: 'POST',
     path: '/api/biometric/start_circuit/{channel_id}',
-    description: 'Inicia un nuevo circuito de verificación biométrica',
+    description: 'Starts a new biometric verification circuit',
     auth: 'bearer',
     headers: [
       { name: 'Authorization', required: true, value: 'Bearer <ACCESS_TOKEN>' },
       { name: 'Content-Type', required: true, value: 'application/json' }
     ],
     params: [
-      { name: 'channel_id', type: 'uuid', required: true, description: 'ID del canal' }
+      { name: 'channel_id', type: 'uuid', required: true, description: 'Channel ID' }
     ],
     body: {
       person: personData
@@ -269,13 +269,13 @@ const endpoints: Endpoint[] = [
     id: 'get-config',
     method: 'GET',
     path: '/api/biometric/get_config/{circuit_id}',
-    description: 'Obtiene la configuración de UI y thresholds para el frontend',
+    description: 'Gets UI config and thresholds for the frontend',
     auth: 'internal',
     headers: [
       { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' }
     ],
     params: [
-      { name: 'circuit_id', type: 'uuid', required: true, description: 'ID del circuito' }
+      { name: 'circuit_id', type: 'uuid', required: true, description: 'Circuit ID' }
     ],
     response: {
       circuitId: '550e8400-e29b-41d4-a716-446655440000',
@@ -294,14 +294,14 @@ const endpoints: Endpoint[] = [
     id: 'upload-url',
     method: 'GET',
     path: '/api/biometric/upload-url/{circuit_id}',
-    description: 'Genera una presigned URL para subir imágenes de documentos a S3',
+    description: 'Generates a presigned URL for uploading document images to S3',
     auth: 'internal',
     headers: [
       { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' }
     ],
     params: [
-      { name: 'circuit_id', type: 'uuid', required: true, description: 'ID del circuito' },
-      { name: 'type', type: 'string', required: true, description: 'front o back' }
+      { name: 'circuit_id', type: 'uuid', required: true, description: 'Circuit ID' },
+      { name: 'type', type: 'string', required: true, description: 'front or back' }
     ],
     response: {
       uploadUrl: 'https://biometric-api-dev-documents.s3.amazonaws.com/cliente001/uuid/front.jpg?...',
@@ -315,14 +315,14 @@ const endpoints: Endpoint[] = [
     id: 'process-circuit',
     method: 'POST',
     path: '/api/biometric/process_circuit/{circuit_id}',
-    description: 'Ejecuta un paso de verificación biométrica',
+    description: 'Executes a biometric verification step',
     auth: 'internal',
     headers: [
       { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' },
       { name: 'Content-Type', required: true, value: 'application/json' }
     ],
     params: [
-      { name: 'circuit_id', type: 'uuid', required: true, description: 'ID del circuito' }
+      { name: 'circuit_id', type: 'uuid', required: true, description: 'Circuit ID' }
     ],
     body: {
       step: 'liveness',
@@ -372,7 +372,7 @@ function App() {
   }
 
   const sections = [
-    { id: 'auth', title: 'Autenticación', endpoints: ['oauth2-token'] },
+    { id: 'auth', title: 'Authentication', endpoints: ['oauth2-token'] },
     { id: 'admin', title: 'Admin API', endpoints: ['admin-clients-create', 'admin-channels-create', 'admin-channels-get', 'admin-channels-update'] },
     { id: 'biometric', title: 'Biometric API', endpoints: ['start-circuit', 'get-config', 'upload-url', 'process-circuit'] }
   ]
@@ -427,13 +427,19 @@ function App() {
           <div id="overview">
             <h1 className="page-title">biometric-api Documentation</h1>
             <p className="page-description">
-              SDK biométrico como servicio (SaaS) que permite a cualquier empresa integrar verificaciones de identidad mediante API REST moderna.
+              Biometric SDK as a service (SaaS) that allows any company to integrate identity verifications via modern REST API.
             </p>
+            <img
+              src="/biometric_api_flow.png"
+              alt="biometric-api Architecture"
+              style={{ width: '100%', borderRadius: '8px', marginTop: '16px', border: '1px solid #e5e7eb' }}
+            />
           </div>
 
           {/* Auth Section */}
           <section id="docs">
-            <h2 className="section-title">Autenticación</h2>
+            <h1 className="page-title">API Reference</h1>
+            <h2 className="section-title">Authentication</h2>
             {endpoints.filter(e => e.auth === 'none').map(endpoint => (
               <div
                 key={endpoint.id}
@@ -447,7 +453,7 @@ function App() {
                   <span className="endpoint-path">{endpoint.path}</span>
                   <span className="endpoint-description">{endpoint.description}</span>
                   <span className={`auth-badge ${endpoint.auth}`}>
-                    {endpoint.auth === 'none' ? (endpoint.id === 'oauth2-token' ? '🔑 client_id + client_secret' : '🔓 Público') : ''}
+                    {endpoint.auth === 'none' ? (endpoint.id === 'oauth2-token' ? '🔑 client_id + client_secret' : '🔓 Public') : ''}
                     {endpoint.auth === 'internal' ? '🔐 x-internal-key' : ''}
                   </span>
                   <span className="endpoint-toggle">▼</span>
@@ -508,7 +514,7 @@ function App() {
           {/* Admin API Section */}
           <h2 className="section-title">Admin API</h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Endpoints para configuración de clientes y canales. Requieren header <code>x-admin-key</code>.
+            Endpoints for client and channel configuration. Require <code>x-admin-key</code> header.
           </p>
           {endpoints.filter(e => e.auth === 'admin').map(endpoint => (
             <div
@@ -604,7 +610,7 @@ function App() {
           {/* Biometric API Section */}
           <h2 className="section-title">Biometric API</h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Endpoints para el flujo de verificación biométrica. Los endpoints <code>get_config</code>, <code>upload-url</code> y <code>process_circuit</code> usan <code>x-internal-key</code> header (para uso del frontend portal). El endpoint <code>start_circuit</code> usa Bearer token con scope <code>biometric-danaconnect/access</code>.
+            Endpoints for the biometric verification flow. The <code>get_config</code>, <code>upload-url</code>, and <code>process_circuit</code> endpoints use the <code>x-internal-key</code> header (for portal frontend use). The <code>start_circuit</code> endpoint uses Bearer token with scope <code>biometric-danaconnect/access</code>.
           </p>
           {endpoints.filter(e => e.auth === 'internal').map(endpoint => (
             <div
@@ -698,13 +704,13 @@ function App() {
           ))}
 
           {/* Webhook Section */}
-          <h2 className="section-title">Webhook de finalización</h2>
+          <h2 className="section-title">Completion Webhook</h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Cuando un circuito se completa, se envía un POST al webhookUrl configurado en el canal.
+            When a circuit is completed, a POST is sent to the configured webhookUrl.
           </p>
           <div className="endpoint-card expanded">
             <div className="endpoint-section">
-              <h4>Webhook Payload (POST a webhookUrl)</h4>
+              <h4>Webhook Payload (POST to webhookUrl)</h4>
               <div className="code-wrapper">
                 <pre><code>{formatJSON(webhookPayload)}</code></pre>
               </div>
