@@ -532,7 +532,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       Key: { circuit_id: { S: circuitId } },
       UpdateExpression: `SET ${updateParts.join(', ')}`,
       ExpressionAttributeNames: expressionAttributeNames,
-      ExpressionAttributeValues: marshall(expressionAttributeValues),
+      ExpressionAttributeValues: marshall(expressionAttributeValues, { removeUndefinedValues: true }),
       ReturnValues: 'ALL_NEW',
     });
 
