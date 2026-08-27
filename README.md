@@ -503,3 +503,34 @@ Cuando un circuito se completa (status `completed` o `failed`), se envía un POS
 - **Circuitos expirados**: 15 minutos después de creación
 - **Circuitos de uso único**: Solo pueden completarse una vez
 - **Tags en todos los recursos**: `Project=biometric-api`, `Environment={env}`, `Owner=danaconnect`
+## Recursos AWS creados
+
+| Recurso | Nombre | Descripción |
+|---------|--------|-------------|
+| DynamoDB | `biometric-api-{env}-channels` | Configuración de channels por cliente |
+| DynamoDB | `biometric-api-{env}-circuits` | Historial de verificaciones |
+| S3 | `biometric-api-{env}-documents` | Imágenes biométricas por tenant/circuit |
+| Cognito User Pool | `biometric-api-{env}-userpool` | Autenticación machine-to-machine |
+| Cognito Domain | `biometric-api-{env}` | Endpoint OAuth2 token |
+| API Gateway | `biometric-api-{env}-gateway` | Endpoints REST públicos y admin |
+| Lambda | `biometric-api-{env}-fn-admin-create-client` | Crear App Client en Cognito |
+| Lambda | `biometric-api-{env}-fn-admin-create-channel` | Crear channel en DynamoDB |
+| Lambda | `biometric-api-{env}-fn-admin-get-channel` | Obtener channel |
+| Lambda | `biometric-api-{env}-fn-admin-update-channel` | Actualizar channel (deep merge) |
+| Lambda | `biometric-api-{env}-fn-start-circuit` | Iniciar verificación |
+| Lambda | `biometric-api-{env}-fn-get-config` | Obtener UI config para frontend |
+| Lambda | `biometric-api-{env}-fn-upload-url` | Generar presigned URL para S3 |
+| Lambda | `biometric-api-{env}-fn-process-circuit` | Orquestador de steps biométricos |
+
+## Seguridad por capas
+
+| Endpoint | Auth | Quién lo llama |
+|----------|------|----------------|
+| POST /oauth2/token | Público | Backend del cliente |
+| POST /api/biometric/start_circuit | Bearer token Cognito | Backend del cliente |
+| GET /api/biometric/get_config | x-internal-key | Frontend portal |
+| GET /api/biometric/upload-url | x-internal-key | Frontend portal |
+| POST /api/biometric/process_circuit | x-internal-key | Frontend portal |
+| POST /api/admin/* | x-admin-key | Soporte (Postman) |
+
+> **Nota**: Los endpoints del frontend (get_config, upload-url, process_circuit) usan `x-internal-key` header porque son llamados directamente desde el navegador del usuario final, quien no tiene acceso a tokens de Cognito.

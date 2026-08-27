@@ -270,9 +270,9 @@ const endpoints: Endpoint[] = [
     method: 'GET',
     path: '/api/biometric/get_config/{circuit_id}',
     description: 'Obtiene la configuración de UI y thresholds para el frontend',
-    auth: 'bearer',
+    auth: 'internal',
     headers: [
-      { name: 'Authorization', required: true, value: 'Bearer <ACCESS_TOKEN>' }
+      { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' }
     ],
     params: [
       { name: 'circuit_id', type: 'uuid', required: true, description: 'ID del circuito' }
@@ -288,16 +288,16 @@ const endpoints: Endpoint[] = [
       thresholds: channelSettings.thresholds
     },
     curl: `curl -X GET "https://api.biometric.danaconnect.com/api/biometric/get_config/550e8400-e29b-41d4-a716-446655440000" \\
-  -H "Authorization: Bearer <ACCESS_TOKEN>"`
+  -H "x-internal-key: <INTERNAL_KEY>"`
   },
   {
     id: 'upload-url',
     method: 'GET',
     path: '/api/biometric/upload-url/{circuit_id}',
     description: 'Genera una presigned URL para subir imágenes de documentos a S3',
-    auth: 'bearer',
+    auth: 'internal',
     headers: [
-      { name: 'Authorization', required: true, value: 'Bearer <ACCESS_TOKEN>' }
+      { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' }
     ],
     params: [
       { name: 'circuit_id', type: 'uuid', required: true, description: 'ID del circuito' },
@@ -309,16 +309,16 @@ const endpoints: Endpoint[] = [
       expiresIn: 600
     },
     curl: `curl -X GET "https://api.biometric.danaconnect.com/api/biometric/upload-url/550e8400-e29b-41d4-a716-446655440000?type=front" \\
-  -H "Authorization: Bearer <ACCESS_TOKEN>"`
+  -H "x-internal-key: <INTERNAL_KEY>"`
   },
   {
     id: 'process-circuit',
     method: 'POST',
     path: '/api/biometric/process_circuit/{circuit_id}',
     description: 'Ejecuta un paso de verificación biométrica',
-    auth: 'bearer',
+    auth: 'internal',
     headers: [
-      { name: 'Authorization', required: true, value: 'Bearer <ACCESS_TOKEN>' },
+      { name: 'x-internal-key', required: true, value: '<INTERNAL_KEY>' },
       { name: 'Content-Type', required: true, value: 'application/json' }
     ],
     params: [
@@ -340,7 +340,7 @@ const endpoints: Endpoint[] = [
       nextStep: 'ocr'
     },
     curl: `curl -X POST "https://api.biometric.danaconnect.com/api/biometric/process_circuit/550e8400-e29b-41d4-a716-446655440000" \\
-  -H "Authorization: Bearer <ACCESS_TOKEN>" \\
+  -H "x-internal-key: <INTERNAL_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"step": "liveness", "data": {"sessionId": "rekognition-session-id"}}'`
   }
@@ -603,9 +603,9 @@ function App() {
           {/* Biometric API Section */}
           <h2 className="section-title">Biometric API</h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Endpoints para el flujo de verificación biométrica. Requieren Bearer token con scope <code>biometric-danaconnect/access</code>.
+            Endpoints para el flujo de verificación biométrica. Los endpoints <code>get_config</code>, <code>upload-url</code> y <code>process_circuit</code> usan <code>x-internal-key</code> header (para uso del frontend portal). El endpoint <code>start_circuit</code> usa Bearer token con scope <code>biometric-danaconnect/access</code>.
           </p>
-          {endpoints.filter(e => e.auth === 'bearer').map(endpoint => (
+          {endpoints.filter(e => e.auth === 'internal').map(endpoint => (
             <div
               key={endpoint.id}
               id={`endpoint-${endpoint.id}`}
@@ -617,7 +617,7 @@ function App() {
                 </span>
                 <span className="endpoint-path">{endpoint.path}</span>
                 <span className="endpoint-description">{endpoint.description}</span>
-                <span className={`auth-badge bearer`}>🔐 Bearer Token</span>
+                <span className={`auth-badge bearer`}>🔐 x-internal-key</span>
                 <span className="endpoint-toggle">▼</span>
               </div>
               <div className="endpoint-details">

@@ -316,3 +316,19 @@ flowchart LR
 | `ADMIN_KEY` | Clave para API admin | Sí |
 | `USER_POOL_ID` | ID del User Pool | No |
 | `AWS_BRANCH` | Rama de ambiente | No |
+## Seguridad por capas
+
+| Endpoint | Auth | Quién lo llama |
+|----------|------|----------------|
+| POST /oauth2/token | Público | Backend del cliente |
+| POST /api/biometric/start_circuit | Bearer token Cognito | Backend del cliente |
+| GET /api/biometric/get_config | x-internal-key | Frontend portal |
+| GET /api/biometric/upload-url | x-internal-key | Frontend portal |
+| POST /api/biometric/process_circuit | x-internal-key | Frontend portal |
+| POST /api/admin/* | x-admin-key | Soporte (Postman) |
+
+**Notas sobre autenticación:**
+
+- Los endpoints del frontend (`get_config`, `upload-url`, `process_circuit`) usan `x-internal-key` header porque son llamados directamente desde el navegador del usuario final, quien no tiene acceso a tokens de Cognito.
+- El endpoint `start_circuit` usa Bearer token porque es llamado desde el backend del cliente (que sí tiene credenciales de Cognito).
+- Los endpoints admin usan `x-admin-key` para operaciones de soporte via Postman.
