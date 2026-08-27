@@ -65,15 +65,6 @@ SDK biométrico como servicio (SaaS) que permite a cualquier empresa integrar ve
    - Primera vez: crea todos los recursos de infraestructura
    - En `addOutput` estarán disponibles: `userPoolId`, `apiGatewayUrl`, etc.
 
-## Variables de entorno
-
-| Variable | Descripción | Cómo obtenerla |
-|----------|-------------|----------------|
-| `ADMIN_KEY` | Clave secreta para endpoints admin | `openssl rand -base64 32` |
-| `USER_POOL_ID` | ID del Cognito User Pool | Amplify Console → Backend environments → addOutput |
-| `INTERNAL_KEY` | Clave para endpoints del frontend portal | `openssl rand -base64 32` |
-| `AWS_BRANCH` | Rama de ambiente (dev/staging/prod) | Opcional, default: `dev` |
-
 ## Endpoints API Admin (x-admin-key)
 
 Estos endpoints son usados por el equipo de soporte mediante Postman para configurar clientes y canales.
@@ -220,6 +211,11 @@ Content-Type: application/json
 
 Obtiene la configuración de UI y thresholds para renderizar el flujo de verificación.
 
+**Headers:**
+```
+x-internal-key: <INTERNAL_KEY>
+```
+
 **Response:**
 ```json
 {
@@ -252,6 +248,11 @@ Obtiene la configuración de UI y thresholds para renderizar el flujo de verific
 
 Genera una presigned URL para subir imágenes de documentos a S3.
 
+**Headers:**
+```
+x-internal-key: <INTERNAL_KEY>
+```
+
 **Response:**
 ```json
 {
@@ -274,7 +275,7 @@ Ejecuta un paso de verificación biométrica.
 
 **Headers:**
 ```
-Authorization: Bearer <ACCESS_TOKEN>
+x-internal-key: <INTERNAL_KEY>
 Content-Type: application/json
 ```
 
