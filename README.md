@@ -49,12 +49,15 @@ SDK biométrico como servicio (SaaS) que permite a cualquier empresa integrar ve
    En la consola de Amplify, ir a:
    - **Environment variables** → **Edit**
 
-   Agregar las siguientes variables:
+   Las variables requeridas son:
 
-   | Variable | Valor |
-   |----------|-------|
-   | `ADMIN_KEY` | Valor generado con `openssl rand -base64 32` |
-   | `USER_POOL_ID` | Se configura automáticamente en el primer deploy |
+   | Variable | Descripción | Cómo obtenerla |
+   |----------|-------------|----------------|
+   | `ADMIN_KEY` | Clave para API admin (Postman) | `openssl rand -base64 32` |
+   | `USER_POOL_ID` | ID del User Pool de Cognito | Amplify Console → outputs después del primer deploy |
+   | `INTERNAL_KEY` | Clave para endpoints del frontend | `openssl rand -base64 32` |
+
+   > **Nota**: Ver sección "Variables de entorno" abajo para detalles completos.
 
 5. **Deploy**
 
@@ -62,21 +65,13 @@ SDK biométrico como servicio (SaaS) que permite a cualquier empresa integrar ve
    - Primera vez: crea todos los recursos de infraestructura
    - En `addOutput` estarán disponibles: `userPoolId`, `apiGatewayUrl`, etc.
 
-6. **Configurar USER_POOL_ID**
-
-   Después del primer deploy exitoso:
-   - Ir a Amplify Console → Backend environments
-   - Copiar `USER_POOL_ID` del output
-   - Agregar como variable de entorno en Amplify Console
-
-   > **Importante**: USER_POOL_ID es necesario para que `fn-admin-create-client` pueda crear App Clients.
-
 ## Variables de entorno
 
 | Variable | Descripción | Cómo obtenerla |
 |----------|-------------|----------------|
 | `ADMIN_KEY` | Clave secreta para endpoints admin | `openssl rand -base64 32` |
 | `USER_POOL_ID` | ID del Cognito User Pool | Amplify Console → Backend environments → addOutput |
+| `INTERNAL_KEY` | Clave para endpoints del frontend portal | `openssl rand -base64 32` |
 | `AWS_BRANCH` | Rama de ambiente (dev/staging/prod) | Opcional, default: `dev` |
 
 ## Endpoints API Admin (x-admin-key)
