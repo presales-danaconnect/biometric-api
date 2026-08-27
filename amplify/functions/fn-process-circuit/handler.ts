@@ -500,9 +500,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const expressionAttributeNames: Record<string, string> = {};
     const expressionAttributeValues: Record<string, unknown> = {};
 
-    updateParts.push('#result.#step = :stepResult');
+    updateParts.push(`#result.#stepName = :stepResult`);
     expressionAttributeNames['#result'] = 'result';
-    expressionAttributeNames['#step'] = step;
+    expressionAttributeNames['#stepName'] = step;
     expressionAttributeValues[':stepResult'] = stepResult;
 
     updateParts.push('#steps_completed = list_append(if_not_exists(#steps_completed, :emptyList), :newStep)');
@@ -513,10 +513,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     if (newStatus === 'completed' || newStatus === 'failed') {
       updateParts.push('#status = :newStatus');
       updateParts.push('#completed_at = :completedAt');
+      expressionAttributeNames['#status'] = 'status';
+      expressionAttributeNames['#completed_at'] = 'completed_at';
       expressionAttributeValues[':newStatus'] = newStatus;
       expressionAttributeValues[':completedAt'] = new Date().toISOString();
     } else {
       updateParts.push('#status = :newStatus');
+      expressionAttributeNames['#status'] = 'status';
       expressionAttributeValues[':newStatus'] = newStatus;
     }
 
