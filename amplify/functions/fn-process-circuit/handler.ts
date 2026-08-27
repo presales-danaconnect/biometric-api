@@ -505,7 +505,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     expressionAttributeNames['#step'] = step;
     expressionAttributeValues[':stepResult'] = stepResult;
 
-    updateParts.push('#steps_completed = list_append(if_not_exists(#steps_completed, :empty_list), :newStep)');
+    updateParts.push('#steps_completed = list_append(if_not_exists(#steps_completed, :emptyList), :newStep)');
     expressionAttributeNames['#steps_completed'] = 'steps_completed';
     expressionAttributeValues[':emptyList'] = [];
     expressionAttributeValues[':newStep'] = [step];
