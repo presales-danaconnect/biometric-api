@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Duration } from 'aws-cdk-lib/aws-lambda';
 import { Table } from 'aws-cdk-lib/aws-dynamodb';
 import { Tags } from 'aws-cdk-lib';
 
@@ -21,6 +21,8 @@ export function createAdminCreateChannelFunction(
     entry: './amplify/functions/fn-admin-create-channel/handler.ts',
     runtime: Runtime.NODEJS_20_X,
     handler: 'handler',
+    timeout: Duration.seconds(10),
+    memorySize: 256,
     environment: {
       ADMIN_KEY: process.env.ADMIN_KEY || 'default-admin-key-change-me',
       CHANNELS_TABLE_NAME: channelsTable.tableName,

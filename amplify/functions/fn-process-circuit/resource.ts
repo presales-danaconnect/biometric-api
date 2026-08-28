@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Duration } from 'aws-cdk-lib/aws-lambda';
 import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Table as DynamoTable } from 'aws-cdk-lib/aws-dynamodb';
 import { Tags } from 'aws-cdk-lib';
@@ -24,6 +24,8 @@ export function createProcessCircuitFunction(
     entry: './amplify/functions/fn-process-circuit/handler.ts',
     runtime: Runtime.NODEJS_20_X,
     handler: 'handler',
+    timeout: Duration.seconds(30),
+    memorySize: 512,
     environment: {
       CIRCUITS_TABLE_NAME: circuitsTable.tableName,
       CHANNELS_TABLE_NAME: channelsTable.tableName,

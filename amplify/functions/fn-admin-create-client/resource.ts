@@ -1,7 +1,7 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
-import { Runtime } from 'aws-cdk-lib/aws-lambda';
+import { Runtime, Duration } from 'aws-cdk-lib/aws-lambda';
 import { Tags } from 'aws-cdk-lib';
 
 function getEnv(): string {
@@ -19,6 +19,8 @@ export function createAdminCreateClientFunction(
     entry: './amplify/functions/fn-admin-create-client/handler.ts',
     runtime: Runtime.NODEJS_20_X,
     handler: 'handler',
+    timeout: Duration.seconds(10),
+    memorySize: 256,
     environment: {
       ADMIN_KEY: process.env.ADMIN_KEY || 'default-admin-key-change-me',
       USER_POOL_ID: process.env.USER_POOL_ID || '',
