@@ -546,7 +546,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const updatedCircuit = unmarshall(updateResponse.Attributes || {}) as CircuitItem;
 
     // Call webhook if completed or failed
-    if ((newStatus === 'completed' || newStatus === 'failed') && channel.settings.webhookUrl) {
+    if ((updatedCircuit.status === 'completed' || updatedCircuit.status === 'failed') && channel.settings.webhookUrl) {
       await callWebhook(channel.settings.webhookUrl, updatedCircuit, channel);
     }
 
