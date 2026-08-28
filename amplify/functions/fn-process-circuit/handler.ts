@@ -485,19 +485,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       ? channel.settings.steps[nextStepIndex]
       : null;
 
-    // Determine new status
-    let newStatus: 'in_progress' | 'completed' | 'failed' = 'in_progress';
-    const allStepsCompleted = nextStep === null;
-
-    // If OCR returns NOT_A_DOCUMENT, keep status as 'in_progress' for retry
-    if (stepResult.errorCode === 'NOT_A_DOCUMENT') {
-      newStatus = 'in_progress';
-    } else if (allStepsCompleted) {
-      // Check if any step failed
-      const stepsToCheck = channel.settings.steps.filter((s) => !circuit.steps_completed.includes(s) && s !== step);
-      const allSuccessful = stepsToCheck.every((s) => stepResult.success);
-      newStatus = stepResult.success && allSuccessful ? 'completed' : 'failed';
-    }
+    // Determine if step should be added to steps_completed
+    const isNotADocument = stepResult.errorCode === 'NOT_A_DOCUMENT';
+    const shouldCompleteStep = !isNotADocument && stepResult.success;
 
     // Build update expression
     const updateParts: string[] = [];
@@ -509,22 +499,31 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     expressionAttributeNames['#stepName'] = step;
     expressionAttributeValues[':stepResult'] = stepResult;
 
-    updateParts.push('#steps_completed = list_append(if_not_exists(#steps_completed, :emptyList), :newStep)');
-    expressionAttributeNames['#steps_completed'] = 'steps_completed';
-    expressionAttributeValues[':emptyList'] = [];
-    expressionAttributeValues[':newStep'] = [step];
+    // Only add to steps_completed if step was successful and NOT a NOT_A_DOCUMENT error
+    if (shouldCompleteStep) {
+      updateParts.push('#steps_completed = list_append(if_not_exists(#steps_completed, :emptyList), :newStep)');
+      expressionAttributeNames['#steps_completed'] = 'steps_completed';
+      expressionAttributeValues[':emptyList'] = [];
+      expressionAttributeValues[':newStep'] = [step];
+    }
 
-    if (newStatus === 'completed' || newStatus === 'failed') {
-      updateParts.push('#status = :newStatus');
-      updateParts.push('#completed_at = :completedAt');
-      expressionAttributeNames['#status'] = 'status';
-      expressionAttributeNames['#completed_at'] = 'completed_at';
-      expressionAttributeValues[':newStatus'] = newStatus;
-      expressionAttributeValues[':completedAt'] = new Date().toISOString();
-    } else {
-      updateParts.push('#status = :newStatus');
-      expressionAttributeNames['#status'] = 'status';
-      expressionAttributeValues[':newStatus'] = newStatus;
+    // Only update status if step was completed (not NOT_A_DOCUMENT)
+    if (shouldCompleteStep) {
+      const allStepsCompleted = nextStep === null;
+      if (allStepsCompleted) {
+        // Check if all steps were successful
+        const stepsToCheck = channel.settings.steps.filter((s) => !circuit.steps_completed.includes(s) && s !== step);
+        const allSuccessful = stepsToCheck.every((s) => stepResult.success);
+        const newStatus = allSuccessful ? 'completed' : 'failed';
+
+        updateParts.push('#status = :newStatus');
+        updateParts.push('#completed_at = :completedAt');
+        expressionAttributeNames['#status'] = 'status';
+        expressionAttributeNames['#completed_at'] = 'completed_at';
+        expressionAttributeValues[':newStatus'] = newStatus;
+        expressionAttributeValues[':completedAt'] = new Date().toISOString();
+      }
+      // If not all steps completed, status remains unchanged (circuit keeps current status)
     }
 
     if (geolocation && !circuit.geolocation) {
@@ -555,9 +554,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       circuitId,
       step,
       stepResult,
-      status: newStatus,
-      stepsCompleted: [...circuit.steps_completed, step],
-      nextStep,
+      status: circuit.status, // Return original status if NOT_A_DOCUMENT
+      stepsCompleted: shouldCompleteStep ? [...circuit.steps_completed, step] : circuit.steps_completed,
+      nextStep: shouldCompleteStep ? nextStep : null,
     };
 
     return {
