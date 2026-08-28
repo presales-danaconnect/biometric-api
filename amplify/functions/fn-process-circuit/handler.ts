@@ -22,6 +22,7 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Readable } from 'stream';
+import { OCR_PROMPT } from './prompts';
 
 const dynamoClient = new DynamoDBClient({});
 const rekognitionClient = new RekognitionClient({});
@@ -62,6 +63,7 @@ interface StepResult {
     name: boolean;
   };
   error?: string;
+  errorCode?: string;
 }
 
 interface CircuitItem {
@@ -207,16 +209,7 @@ async function performOcr(bucket: string, codeClient: string, circuitId: string,
     }
   }
 
-  const prompt = `You are a document OCR assistant. Extract data from this identity document and return ONLY a JSON object with:
-- nombre: The person's first name
-- apellido: The person's last name  
-- documentNumber: The document number
-- fechaNacimiento: Date of birth in YYYY-MM-DD format
-- fechaVencimiento: Expiration date in YYYY-MM-DD format
-- nacionalidad: Nationality/country
-
-If a field cannot be read, set it to null.
-Return ONLY the JSON, no text, no markdown, no code blocks.`;
+  const prompt = OCR_PROMPT;
 
   const requestBody = JSON.stringify({
     anthropic_version: 'bedrock-2023-05-31',
@@ -258,7 +251,15 @@ Return ONLY the JSON, no text, no markdown, no code blocks.`;
     return { success: false, error: 'Invalid JSON in OCR response' };
   }
 
-  return { success: true, extractedData };
+  // Check if image is a valid document
+  if (extractedData.isDocument === false) {
+    return { success: false, errorCode: 'NOT_A_DOCUMENT', error: 'Image is not a valid identity document' };
+  }
+
+  // Remove isDocument from extractedData before returning
+  const { isDocument, ...cleanedData } = extractedData;
+
+  return { success: true, extractedData: cleanedData };
 }
 
 async function performDataVerification(circuit: CircuitItem): Promise<StepResult> {
@@ -488,7 +489,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     let newStatus: 'in_progress' | 'completed' | 'failed' = 'in_progress';
     const allStepsCompleted = nextStep === null;
 
-    if (allStepsCompleted) {
+    // If OCR returns NOT_A_DOCUMENT, keep status as 'in_progress' for retry
+    if (stepResult.errorCode === 'NOT_A_DOCUMENT') {
+      newStatus = 'in_progress';
+    } else if (allStepsCompleted) {
       // Check if any step failed
       const stepsToCheck = channel.settings.steps.filter((s) => !circuit.steps_completed.includes(s) && s !== step);
       const allSuccessful = stepsToCheck.every((s) => stepResult.success);
