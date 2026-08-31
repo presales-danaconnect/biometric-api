@@ -175,7 +175,13 @@ async function uploadToS3(bucket: string, key: string, body: Buffer, contentType
   await s3Client.send(command);
 }
 
-async function getLivenessResult(sessionId: string, threshold: number): Promise<StepResult> {
+async function getLivenessResult(
+  sessionId: string,
+  threshold: number,
+  bucket: string,
+  codeClient: string,
+  circuitId: string
+): Promise<StepResult> {
   const command = new GetFaceLivenessSessionResultsCommand({ SessionId: sessionId });
   const response = await rekognitionClient.send(command);
 
@@ -186,9 +192,17 @@ async function getLivenessResult(sessionId: string, threshold: number): Promise<
   const confidence = Math.round(response.Confidence);
   const success = confidence >= threshold;
 
+  // Save reference image to S3 if liveness is successful
+  let s3Key: string | undefined;
+  if (success && response.ReferenceImage?.Bytes) {
+    s3Key = `${codeClient}/${circuitId}/liveness-reference.jpg`;
+    await uploadToS3(bucket, s3Key, Buffer.from(response.ReferenceImage.Bytes), 'image/jpeg');
+  }
+
   return {
     success,
     confidence,
+    s3Key,
     error: success ? undefined : `Confidence ${confidence} below threshold ${threshold}`,
   };
 }
@@ -444,13 +458,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         if (!data?.sessionId) {
           return errorResponse(400, 'sessionId required for liveness step');
         }
-        stepResult = await getLivenessResult(data.sessionId, channel.settings.thresholds.livenessConfidenceThreshold);
-
-        // If successful, download reference image and upload to S3
-        if (stepResult.success && stepResult.confidence !== undefined) {
-          // Get reference image from Rekognition would go here
-          // For now, we'll assume the frontend handles the upload
-        }
+        stepResult = await getLivenessResult(
+          data.sessionId,
+          channel.settings.thresholds.livenessConfidenceThreshold,
+          documentsBucketName,
+          channel.code_client,
+          circuitId
+        );
         break;
 
       case 'ocr':
