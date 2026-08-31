@@ -620,12 +620,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':geolocation'] = geolocation;
     }
 
-    // Handle NO_FACE_IN_IMAGE REMOVE operations separately
-    const removeParts: string[] = [];
-    if (resetOcr && incrementAttempts) {
-      removeParts.push('#result.#ocr');
-    }
-
     // Build UpdateExpression with proper SET and REMOVE syntax
     let updateExpression = '';
     const setParts = updateParts.filter((p) => !p.startsWith('REMOVE '));
