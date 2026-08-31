@@ -323,17 +323,29 @@ async function performCompareFaces(
     SimilarityThreshold: threshold,
   });
 
-  const response = await rekognitionClient.send(command);
+  try {
+    const response = await rekognitionClient.send(command);
 
-  if (!response.FaceMatches || response.FaceMatches.length === 0) {
-    return { success: false, similarity: 0 };
+    if (!response.FaceMatches || response.FaceMatches.length === 0) {
+      return { success: false, similarity: 0 };
+    }
+
+    const similarity = response.FaceMatches[0].Similarity || 0;
+    return {
+      success: similarity >= threshold,
+      similarity: Math.round(similarity),
+    };
+  } catch (error: any) {
+    if (error.__type === 'InvalidParameterException' || error.name === 'InvalidParameterException') {
+      return {
+        success: false,
+        similarity: 0,
+        errorCode: 'NO_FACE_IN_IMAGE',
+        error: 'No face detected in one of the images',
+      };
+    }
+    throw error;
   }
-
-  const similarity = response.FaceMatches[0].Similarity || 0;
-  return {
-    success: similarity >= threshold,
-    similarity: Math.round(similarity),
-  };
 }
 
 async function callWebhook(webhookUrl: string, circuit: CircuitItem, channel: ChannelItem): Promise<void> {
