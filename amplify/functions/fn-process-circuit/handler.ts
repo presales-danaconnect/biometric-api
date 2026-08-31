@@ -567,6 +567,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // Handle NO_FACE_IN_IMAGE retry logic
+    const removeParts: string[] = [];
     if (resetOcr && incrementAttempts) {
       // Increment compare_faces_attempts
       updateParts.push('#compare_faces_attempts = if_not_exists(#compare_faces_attempts, :zero) + :one');
@@ -581,7 +582,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
 
       // Remove result.ocr from the result map
-      updateParts.push('REMOVE #result.#ocr');
+      removeParts.push('#result.#ocr');
       expressionAttributeNames['#result'] = 'result';
       expressionAttributeNames['#ocr'] = 'ocr';
     }
@@ -619,11 +620,30 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':geolocation'] = geolocation;
     }
 
+    // Handle NO_FACE_IN_IMAGE REMOVE operations separately
+    const removeParts: string[] = [];
+    if (resetOcr && incrementAttempts) {
+      removeParts.push('#result.#ocr');
+    }
+
+    // Build UpdateExpression with proper SET and REMOVE syntax
+    let updateExpression = '';
+    const setParts = updateParts.filter((p) => !p.startsWith('REMOVE '));
+    const removeClause = removeParts.length > 0 ? `REMOVE ${removeParts.join(', ')}` : '';
+
+    if (setParts.length > 0 && removeClause) {
+      updateExpression = `SET ${setParts.join(', ')} ${removeClause}`;
+    } else if (setParts.length > 0) {
+      updateExpression = `SET ${setParts.join(', ')}`;
+    } else if (removeClause) {
+      updateExpression = removeClause;
+    }
+
     // Update circuit
     const updateCommand = new UpdateItemCommand({
       TableName: circuitsTableName,
       Key: { circuit_id: { S: circuitId } },
-      UpdateExpression: `SET ${updateParts.join(', ')}`,
+      UpdateExpression: updateExpression,
       ExpressionAttributeNames: expressionAttributeNames,
       ExpressionAttributeValues: marshall(expressionAttributeValues, { removeUndefinedValues: true }),
       ReturnValues: 'ALL_NEW',
