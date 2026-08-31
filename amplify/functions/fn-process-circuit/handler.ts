@@ -64,6 +64,7 @@ interface StepResult {
   };
   error?: string;
   errorCode?: string;
+  retryStep?: string;
 }
 
 interface CircuitItem {
@@ -79,6 +80,7 @@ interface CircuitItem {
   expires_at: string;
   completed_at?: string;
   geolocation?: string;
+  compare_faces_attempts?: number;
 }
 
 interface ChannelSettings {
@@ -499,11 +501,42 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           circuitId,
           channel.settings.thresholds.compareFacesSimilarityThreshold
         );
+
+        // Handle NO_FACE_IN_IMAGE error - allow retry by resetting OCR
+        if (stepResult.errorCode === 'NO_FACE_IN_IMAGE') {
+          const currentAttempts = circuit.compare_faces_attempts || 0;
+          const maxAttempts = channel.settings.thresholds.maxAttempts;
+
+          if (currentAttempts < maxAttempts) {
+            // Increment attempts and reset OCR step for retry
+            stepResult = {
+              success: false,
+              errorCode: 'NO_FACE_IN_IMAGE',
+              retryStep: 'ocr',
+            };
+
+            // Modify the circuit update to reset OCR and increment attempts
+            // This will be handled by building a custom update expression below
+            (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).resetOcr = true;
+            (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).incrementAttempts = true;
+          } else {
+            // Max attempts reached, fail the circuit
+            stepResult = {
+              success: false,
+              errorCode: 'MAX_ATTEMPTS_REACHED',
+            };
+          }
+        }
         break;
 
       default:
         return errorResponse(400, `Unknown step: ${step}`);
     }
+
+    // Check if we need to handle NO_FACE_IN_IMAGE retry logic
+    const resetOcr = (stepResult as StepResult & { resetOcr?: boolean }).resetOcr;
+    const incrementAttempts = (stepResult as StepResult & { incrementAttempts?: boolean }).incrementAttempts;
+    const noFaceInImage = stepResult.errorCode === 'NO_FACE_IN_IMAGE' || stepResult.errorCode === 'MAX_ATTEMPTS_REACHED';
 
     // Calculate next step
     const nextStepIndex = stepIndex + 1;
@@ -513,7 +546,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Determine if step should be added to steps_completed
     const isNotADocument = stepResult.errorCode === 'NOT_A_DOCUMENT';
-    const shouldCompleteStep = !isNotADocument && stepResult.success;
+    const shouldCompleteStep = !isNotADocument && !noFaceInImage && stepResult.success;
 
     // Build update expression
     const updateParts: string[] = [];
@@ -533,8 +566,36 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':newStep'] = [step];
     }
 
-    // Only update status if step was completed (not NOT_A_DOCUMENT)
-    if (shouldCompleteStep) {
+    // Handle NO_FACE_IN_IMAGE retry logic
+    if (resetOcr && incrementAttempts) {
+      // Increment compare_faces_attempts
+      updateParts.push('#compare_faces_attempts = if_not_exists(#compare_faces_attempts, :zero) + :one');
+      expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
+      expressionAttributeValues[':zero'] = 0;
+      expressionAttributeValues[':one'] = 1;
+
+      // Filter out 'ocr' from steps_completed
+      const newStepsCompleted = (circuit.steps_completed || []).filter((s) => s !== 'ocr');
+      updateParts.push('#steps_completed = :newStepsCompleted');
+      expressionAttributeNames['#steps_completed'] = 'steps_completed';
+      expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
+
+      // Remove result.ocr from the result map
+      updateParts.push('REMOVE #result.#ocr');
+      expressionAttributeNames['#result'] = 'result';
+      expressionAttributeNames['#ocr'] = 'ocr';
+    }
+
+    // Handle MAX_ATTEMPTS_REACHED
+    if (stepResult.errorCode === 'MAX_ATTEMPTS_REACHED') {
+      updateParts.push('#status = :newStatus');
+      updateParts.push('#completed_at = :completedAt');
+      expressionAttributeNames['#status'] = 'status';
+      expressionAttributeNames['#completed_at'] = 'completed_at';
+      expressionAttributeValues[':newStatus'] = 'failed';
+      expressionAttributeValues[':completedAt'] = new Date().toISOString();
+    } else if (shouldCompleteStep) {
+      // Only update status if step was completed (not NOT_A_DOCUMENT)
       const allStepsCompleted = nextStep === null;
       if (allStepsCompleted) {
         // Check if all steps were successful
@@ -580,9 +641,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       circuitId,
       step,
       stepResult,
-      status: circuit.status, // Return original status if NOT_A_DOCUMENT
-      stepsCompleted: shouldCompleteStep ? [...circuit.steps_completed, step] : circuit.steps_completed,
-      nextStep: shouldCompleteStep ? nextStep : null,
+      status: stepResult.errorCode === 'MAX_ATTEMPTS_REACHED' ? 'failed' : circuit.status,
+      stepsCompleted: resetOcr
+        ? (circuit.steps_completed || []).filter((s) => s !== 'ocr')
+        : shouldCompleteStep
+          ? [...circuit.steps_completed, step]
+          : circuit.steps_completed,
+      nextStep: resetOcr ? 'ocr' : (shouldCompleteStep ? nextStep : null),
     };
 
     return {
