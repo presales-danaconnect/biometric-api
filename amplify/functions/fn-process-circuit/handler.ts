@@ -502,8 +502,27 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           channel.settings.thresholds.compareFacesSimilarityThreshold
         );
 
-        // Handle NO_FACE_IN_IMAGE error - allow retry by resetting OCR
-        if (stepResult.errorCode === 'NO_FACE_IN_IMAGE') {
+        // Handle compare-faces failures
+        if (!stepResult.success && stepResult.similarity !== undefined) {
+          // LOW_SIMILARITY case (similarity > 0 but below threshold)
+          if (!stepResult.errorCode) {
+            stepResult.errorCode = 'LOW_SIMILARITY';
+          }
+
+          const currentAttempts = circuit.compare_faces_attempts || 0;
+          const maxAttempts = channel.settings.thresholds.maxAttempts;
+
+          if (currentAttempts < maxAttempts) {
+            // Mark to increment attempts, do not complete step
+            (stepResult as StepResult & { incrementAttemptsOnly: boolean }).incrementAttemptsOnly = true;
+          } else {
+            // Max attempts reached
+            stepResult = {
+              success: false,
+              errorCode: 'MAX_ATTEMPTS_REACHED',
+            };
+          }
+        } else if (stepResult.errorCode === 'NO_FACE_IN_IMAGE') {
           const currentAttempts = circuit.compare_faces_attempts || 0;
           const maxAttempts = channel.settings.thresholds.maxAttempts;
 
@@ -515,8 +534,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               retryStep: 'ocr',
             };
 
-            // Modify the circuit update to reset OCR and increment attempts
-            // This will be handled by building a custom update expression below
             (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).resetOcr = true;
             (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).incrementAttempts = true;
           } else {
@@ -536,6 +553,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Check if we need to handle NO_FACE_IN_IMAGE retry logic
     const resetOcr = (stepResult as StepResult & { resetOcr?: boolean }).resetOcr;
     const incrementAttempts = (stepResult as StepResult & { incrementAttempts?: boolean }).incrementAttempts;
+    const incrementAttemptsOnly = (stepResult as StepResult & { incrementAttemptsOnly?: boolean }).incrementAttemptsOnly;
     const noFaceInImage = stepResult.errorCode === 'NO_FACE_IN_IMAGE' || stepResult.errorCode === 'MAX_ATTEMPTS_REACHED';
 
     // Calculate next step
@@ -585,6 +603,14 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       removeParts.push('#result.#ocr');
       expressionAttributeNames['#result'] = 'result';
       expressionAttributeNames['#ocr'] = 'ocr';
+    }
+
+    // Handle LOW_SIMILARITY - increment attempts without resetting OCR
+    if (incrementAttemptsOnly && !noFaceInImage) {
+      updateParts.push('#compare_faces_attempts = if_not_exists(#compare_faces_attempts, :zero) + :one');
+      expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
+      expressionAttributeValues[':zero'] = 0;
+      expressionAttributeValues[':one'] = 1;
     }
 
     // Handle MAX_ATTEMPTS_REACHED
