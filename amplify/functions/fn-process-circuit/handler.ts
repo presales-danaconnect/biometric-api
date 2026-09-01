@@ -505,6 +505,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     let incrementAttemptsOnly = false;
     let attempts = 0;
     let dataVerificationAttempts = 0;
+    let resetOcrForDv = false;
 
     // Validate step is in channel's steps
     if (!channel.settings.steps.includes(step)) {
@@ -570,6 +571,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           } else {
             // Keep original error with matches and reason
             stepResult.errorCode = 'DATA_MISMATCH';
+            stepResult.retryStep = 'ocr';
+            resetOcrForDv = true;
             (stepResult as StepResult & { incrementOnly: boolean }).incrementOnly = true;
           }
         }
@@ -695,6 +698,21 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       updateParts.push('#data_verification_attempts = :dataVerificationAttempts');
       expressionAttributeNames['#data_verification_attempts'] = 'data_verification_attempts';
       expressionAttributeValues[':dataVerificationAttempts'] = dataVerificationAttempts;
+
+      // Reset OCR and data-verification for retry
+      if (resetOcrForDv) {
+        const newStepsCompleted = (circuit.steps_completed || []).filter(
+          (s) => s !== 'ocr' && s !== 'data-verification'
+        );
+        console.log('Resetting DV - current steps_completed:', circuit.steps_completed);
+        console.log('Resetting DV - new steps_completed:', newStepsCompleted);
+        updateParts.push('#steps_completed = :newStepsCompleted');
+        expressionAttributeNames['#steps_completed'] = 'steps_completed';
+        expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
+        removeParts.push('#result.#ocr');
+        expressionAttributeNames['#result'] = 'result';
+        expressionAttributeNames['#ocr'] = 'ocr';
+      }
     }
 
     // Complete step and check if all steps are done
@@ -757,12 +775,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       step,
       stepResult,
       status: stepResult.errorCode === 'MAX_ATTEMPTS_REACHED' ? 'failed' : circuit.status,
-      stepsCompleted: resetOcr
-        ? (circuit.steps_completed || []).filter((s) => s !== 'ocr')
+      stepsCompleted: resetOcr || resetOcrForDv
+        ? (circuit.steps_completed || []).filter((s) => s !== 'ocr' && s !== 'data-verification')
         : shouldCompleteStep
           ? [...circuit.steps_completed, step]
           : circuit.steps_completed,
-      nextStep: resetOcr ? 'ocr' : (shouldCompleteStep ? nextStep : null),
+      nextStep: resetOcr || resetOcrForDv ? 'ocr' : (shouldCompleteStep ? nextStep : null),
     };
 
     return {
