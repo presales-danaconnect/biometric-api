@@ -595,6 +595,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
       // Filter out 'ocr' from steps_completed
       const newStepsCompleted = (circuit.steps_completed || []).filter((s) => s !== 'ocr');
+      console.log('Resetting OCR - current steps_completed:', circuit.steps_completed);
+      console.log('Resetting OCR - new steps_completed:', newStepsCompleted);
       updateParts.push('#steps_completed = :newStepsCompleted');
       expressionAttributeNames['#steps_completed'] = 'steps_completed';
       expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
