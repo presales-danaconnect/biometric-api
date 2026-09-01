@@ -467,6 +467,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Execute step
     let stepResult: StepResult;
 
+    let resetOcr = false;
+    let incrementAttempts = false;
+    let incrementAttemptsOnly = false;
+
     switch (step) {
       case 'liveness':
         if (!data?.sessionId) {
@@ -514,7 +518,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
           if (currentAttempts < maxAttempts) {
             // Mark to increment attempts, do not complete step
-            (stepResult as StepResult & { incrementAttemptsOnly: boolean }).incrementAttemptsOnly = true;
+            incrementAttemptsOnly = true;
           } else {
             // Max attempts reached
             stepResult = {
@@ -533,9 +537,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               errorCode: 'NO_FACE_IN_IMAGE',
               retryStep: 'ocr',
             };
-
-            (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).resetOcr = true;
-            (stepResult as StepResult & { resetOcr: boolean; incrementAttempts: boolean }).incrementAttempts = true;
+            resetOcr = true;
+            incrementAttempts = true;
           } else {
             // Max attempts reached, fail the circuit
             stepResult = {
@@ -550,10 +553,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         return errorResponse(400, `Unknown step: ${step}`);
     }
 
-    // Check if we need to handle NO_FACE_IN_IMAGE retry logic
-    const resetOcr = (stepResult as StepResult & { resetOcr?: boolean }).resetOcr;
-    const incrementAttempts = (stepResult as StepResult & { incrementAttempts?: boolean }).incrementAttempts;
-    const incrementAttemptsOnly = (stepResult as StepResult & { incrementAttemptsOnly?: boolean }).incrementAttemptsOnly;
     const noFaceInImage = stepResult.errorCode === 'NO_FACE_IN_IMAGE' || stepResult.errorCode === 'MAX_ATTEMPTS_REACHED';
 
     // Calculate next step
