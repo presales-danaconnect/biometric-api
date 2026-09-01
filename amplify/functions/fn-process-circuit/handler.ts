@@ -444,6 +444,11 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const channel = unmarshall(channelResponse.Item) as ChannelItem;
 
+    // Initialize flags for compare-faces retry logic
+    let resetOcr = false;
+    let incrementAttemptsOnly = false;
+    let attempts = 0;
+
     // Validate step is in channel's steps
     if (!channel.settings.steps.includes(step)) {
       return errorResponse(400, `Step ${step} not configured for this channel`);
@@ -466,10 +471,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Execute step
     let stepResult: StepResult;
-
-    let resetOcr = false;
-    let incrementAttempts = false;
-    let incrementAttemptsOnly = false;
 
     switch (step) {
       case 'liveness':
@@ -506,45 +507,42 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           channel.settings.thresholds.compareFacesSimilarityThreshold
         );
 
-        // Handle compare-faces failures
-        if (!stepResult.success && stepResult.similarity !== undefined) {
-          // LOW_SIMILARITY case (similarity > 0 but below threshold)
-          if (!stepResult.errorCode) {
-            stepResult.errorCode = 'LOW_SIMILARITY';
-          }
+        // Calculate new attempts value
+        attempts = (circuit.compare_faces_attempts || 0) + 1;
+        const maxAttempts = channel.settings.thresholds.maxAttempts;
 
-          const currentAttempts = circuit.compare_faces_attempts || 0;
-          const maxAttempts = channel.settings.thresholds.maxAttempts;
-
-          if (currentAttempts < maxAttempts) {
-            // Mark to increment attempts, do not complete step
-            incrementAttemptsOnly = true;
+        // Handle failures
+        if (!stepResult.success) {
+          if (stepResult.errorCode === 'NO_FACE_IN_IMAGE') {
+            if (attempts >= maxAttempts) {
+              // Max attempts reached, fail circuit
+              stepResult = {
+                success: false,
+                errorCode: 'MAX_ATTEMPTS_REACHED',
+              };
+            } else {
+              // Reset OCR for retry
+              stepResult = {
+                success: false,
+                errorCode: 'NO_FACE_IN_IMAGE',
+                retryStep: 'ocr',
+              };
+              resetOcr = true;
+            }
           } else {
-            // Max attempts reached
-            stepResult = {
-              success: false,
-              errorCode: 'MAX_ATTEMPTS_REACHED',
-            };
-          }
-        } else if (stepResult.errorCode === 'NO_FACE_IN_IMAGE') {
-          const currentAttempts = circuit.compare_faces_attempts || 0;
-          const maxAttempts = channel.settings.thresholds.maxAttempts;
-
-          if (currentAttempts < maxAttempts) {
-            // Increment attempts and reset OCR step for retry
-            stepResult = {
-              success: false,
-              errorCode: 'NO_FACE_IN_IMAGE',
-              retryStep: 'ocr',
-            };
-            resetOcr = true;
-            incrementAttempts = true;
-          } else {
-            // Max attempts reached, fail the circuit
-            stepResult = {
-              success: false,
-              errorCode: 'MAX_ATTEMPTS_REACHED',
-            };
+            // LOW_SIMILARITY or other failure
+            if (attempts >= maxAttempts) {
+              stepResult = {
+                success: false,
+                errorCode: 'MAX_ATTEMPTS_REACHED',
+              };
+            } else {
+              // Keep original error with similarity
+              if (!stepResult.errorCode) {
+                stepResult.errorCode = 'LOW_SIMILARITY';
+              }
+              incrementAttemptsOnly = true;
+            }
           }
         }
         break;
@@ -569,6 +567,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const updateParts: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
     const expressionAttributeValues: Record<string, unknown> = {};
+    const removeParts: string[] = [];
 
     updateParts.push(`#result.#stepName = :stepResult`);
     expressionAttributeNames['#result'] = 'result';
@@ -583,38 +582,29 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':newStep'] = [step];
     }
 
-    // Handle NO_FACE_IN_IMAGE retry logic
-    const removeParts: string[] = [];
-    if (resetOcr && incrementAttempts) {
-      // Increment compare_faces_attempts
-      updateParts.push('#compare_faces_attempts = if_not_exists(#compare_faces_attempts, :zero) + :one');
-      expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
-      expressionAttributeValues[':zero'] = 0;
-      expressionAttributeValues[':one'] = 1;
+    // Handle compare-faces failures with simple update logic
+    const resetOcrResult = (stepResult as StepResult & { resetOcr?: boolean }).resetOcr;
+    const incrementOnly = (stepResult as StepResult & { incrementOnly?: boolean }).incrementOnly;
 
-      // Filter out 'ocr' from steps_completed
+    // Always add compare_faces_attempts to update
+    updateParts.push('#compare_faces_attempts = :attempts');
+    expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
+    expressionAttributeValues[':attempts'] = attempts;
+
+    // Handle NO_FACE_IN_IMAGE - reset OCR
+    if (resetOcrResult) {
       const newStepsCompleted = (circuit.steps_completed || []).filter((s) => s !== 'ocr');
       console.log('Resetting OCR - current steps_completed:', circuit.steps_completed);
       console.log('Resetting OCR - new steps_completed:', newStepsCompleted);
       updateParts.push('#steps_completed = :newStepsCompleted');
       expressionAttributeNames['#steps_completed'] = 'steps_completed';
       expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
-
-      // Remove result.ocr from the result map
       removeParts.push('#result.#ocr');
       expressionAttributeNames['#result'] = 'result';
       expressionAttributeNames['#ocr'] = 'ocr';
     }
 
-    // Handle LOW_SIMILARITY - increment attempts without resetting OCR
-    if (incrementAttemptsOnly && !noFaceInImage) {
-      updateParts.push('#compare_faces_attempts = if_not_exists(#compare_faces_attempts, :zero) + :one');
-      expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
-      expressionAttributeValues[':zero'] = 0;
-      expressionAttributeValues[':one'] = 1;
-    }
-
-    // Handle MAX_ATTEMPTS_REACHED
+    // Handle MAX_ATTEMPTS_REACHED - fail circuit
     if (stepResult.errorCode === 'MAX_ATTEMPTS_REACHED') {
       updateParts.push('#status = :newStatus');
       updateParts.push('#completed_at = :completedAt');
@@ -659,6 +649,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     } else if (removeClause) {
       updateExpression = removeClause;
     }
+
+    // Debug logging
+    console.log('UpdateExpression:', updateExpression);
+    console.log('incrementAttemptsOnly:', incrementAttemptsOnly);
+    console.log('noFaceInImage:', noFaceInImage);
+    console.log('updateParts:', JSON.stringify(updateParts));
+    console.log('compare_faces_attempts before:', circuit.compare_faces_attempts);
 
     // Update circuit
     const updateCommand = new UpdateItemCommand({
