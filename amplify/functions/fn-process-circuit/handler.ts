@@ -81,6 +81,7 @@ interface CircuitItem {
   completed_at?: string;
   geolocation?: string;
   compare_faces_attempts?: number;
+  data_verification_attempts?: number;
 }
 
 interface ChannelSettings {
@@ -503,6 +504,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     let resetOcr = false;
     let incrementAttemptsOnly = false;
     let attempts = 0;
+    let dataVerificationAttempts = 0;
 
     // Validate step is in channel's steps
     if (!channel.settings.steps.includes(step)) {
@@ -552,6 +554,25 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
       case 'data-verification':
         stepResult = await performDataVerification(circuit);
+
+        // Calculate new attempts value
+        dataVerificationAttempts = (circuit.data_verification_attempts || 0) + 1;
+        const dvMaxAttempts = channel.settings.thresholds.maxAttempts;
+
+        // Handle verification failure with retry
+        if (!stepResult.success) {
+          if (dataVerificationAttempts >= dvMaxAttempts) {
+            // Max attempts reached, fail circuit
+            stepResult = {
+              success: false,
+              errorCode: 'MAX_ATTEMPTS_REACHED',
+            };
+          } else {
+            // Keep original error with matches and reason
+            stepResult.errorCode = 'DATA_MISMATCH';
+            (stepResult as StepResult & { incrementOnly: boolean }).incrementOnly = true;
+          }
+        }
         break;
 
       case 'compare-faces':
@@ -667,23 +688,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeNames['#completed_at'] = 'completed_at';
       expressionAttributeValues[':newStatus'] = 'failed';
       expressionAttributeValues[':completedAt'] = new Date().toISOString();
-    } else if (shouldCompleteStep) {
-      // Only update status if step was completed (not NOT_A_DOCUMENT)
-      const allStepsCompleted = nextStep === null;
-      if (allStepsCompleted) {
-        // Check if all steps were successful
-        const stepsToCheck = channel.settings.steps.filter((s) => !circuit.steps_completed.includes(s) && s !== step);
-        const allSuccessful = stepsToCheck.every((s) => stepResult.success);
-        const newStatus = allSuccessful ? 'completed' : 'failed';
+    }
 
-        updateParts.push('#status = :newStatus');
-        updateParts.push('#completed_at = :completedAt');
-        expressionAttributeNames['#status'] = 'status';
-        expressionAttributeNames['#completed_at'] = 'completed_at';
-        expressionAttributeValues[':newStatus'] = newStatus;
-        expressionAttributeValues[':completedAt'] = new Date().toISOString();
-      }
-      // If not all steps completed, status remains unchanged (circuit keeps current status)
+    // Handle data-verification attempts
+    if (step === 'data-verification' && dataVerificationAttempts > 0) {
+      updateParts.push('#data_verification_attempts = :dataVerificationAttempts');
+      expressionAttributeNames['#data_verification_attempts'] = 'data_verification_attempts';
+      expressionAttributeValues[':dataVerificationAttempts'] = dataVerificationAttempts;
+    }
+
+    // Complete step and check if all steps are done
+    if (shouldCompleteStep && nextStep === null) {
+      const newStatus = stepResult.success ? 'completed' : 'failed';
+      updateParts.push('#status = :newStatus');
+      updateParts.push('#completed_at = :completedAt');
+      expressionAttributeNames['#status'] = 'status';
+      expressionAttributeNames['#completed_at'] = 'completed_at';
+      expressionAttributeValues[':newStatus'] = newStatus;
+      expressionAttributeValues[':completedAt'] = new Date().toISOString();
     }
 
     if (geolocation && !circuit.geolocation) {
