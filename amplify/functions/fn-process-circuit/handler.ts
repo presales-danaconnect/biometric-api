@@ -291,16 +291,70 @@ async function performDataVerification(circuit: CircuitItem): Promise<StepResult
     return { success: false, error: 'No person data in circuit' };
   }
 
-  const documentNumberMatch = person.documentNumber === ocr.documentNumber;
-  const fullNameFromOcr = [ocr.nombre, ocr.apellido].filter(Boolean).join(' ');
-  const nameMatch = compareNames(person.name, fullNameFromOcr);
+  const prompt = `Compara si los siguientes datos pertenecen a la misma persona.
+Prioriza el número de documento como identificador único.
+
+Datos del sistema:
+- Número de documento: ${person.documentNumber}
+- Nombre: ${person.name}
+
+Datos del documento OCR:
+- Número de documento: ${ocr.documentNumber}
+- Nombre: ${ocr.nombre} ${ocr.apellido}
+
+Responde SOLO con un JSON sin texto adicional:
+{
+  "samePerson": true/false,
+  "documentNumberMatch": true/false,
+  "nameMatch": true/false,
+  "confidence": 0-100,
+  "reason": "explicación breve"
+}`;
+
+  const requestBody = JSON.stringify({
+    anthropic_version: 'bedrock-2023-05-31',
+    max_tokens: 512,
+    messages: [
+      {
+        role: 'user',
+        content: [{ type: 'text', text: prompt }],
+      },
+    ],
+  });
+
+  const command = new InvokeModelCommand({
+    modelId: process.env.BEDROCK_MODEL_ID || 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
+    contentType: 'application/json',
+    body: requestBody,
+  });
+
+  const response = await bedrockClient.send(command);
+  const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+  const extractedText = responseBody.content?.[0]?.text || '';
+
+  // Parse JSON from response
+  const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    return { success: false, error: 'Failed to parse verification response' };
+  }
+
+  let verificationResult;
+  try {
+    verificationResult = JSON.parse(jsonMatch[0]);
+  } catch {
+    return { success: false, error: 'Invalid JSON in verification response' };
+  }
+
+  const { samePerson, documentNumberMatch, nameMatch, confidence, reason } = verificationResult;
 
   return {
-    success: documentNumberMatch && nameMatch,
+    success: samePerson,
     matches: {
       documentNumber: documentNumberMatch,
       name: nameMatch,
     },
+    confidence,
+    error: samePerson ? undefined : reason,
   };
 }
 
