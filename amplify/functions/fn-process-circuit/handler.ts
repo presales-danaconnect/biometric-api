@@ -292,7 +292,8 @@ async function performDataVerification(circuit: CircuitItem): Promise<StepResult
   }
 
   const documentNumberMatch = person.documentNumber === ocr.documentNumber;
-  const nameMatch = compareNames(person.name, ocr.nombre);
+  const fullNameFromOcr = [ocr.nombre, ocr.apellido].filter(Boolean).join(' ');
+  const nameMatch = compareNames(person.name, fullNameFromOcr);
 
   return {
     success: documentNumberMatch && nameMatch,
