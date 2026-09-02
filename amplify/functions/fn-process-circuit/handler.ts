@@ -663,7 +663,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // Handle compare-faces failures with simple update logic
-    const resetOcrResult = (stepResult as StepResult & { resetOcr?: boolean }).resetOcr;
+    const resetOcrResult = resetOcr;
     const incrementOnly = (stepResult as StepResult & { incrementOnly?: boolean }).incrementOnly;
 
     // Always add compare_faces_attempts to update
