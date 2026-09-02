@@ -159,6 +159,25 @@ const errorCodesDoc = {
   ]
 }
 
+// Format JSON for display
+function formatJSON(obj: object): string {
+  return JSON.stringify(obj, null, 2)
+}
+
+// Navigation items
+const navItems = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'client', label: 'Client Integration', children: [
+    { id: 'auth', label: 'Authentication' },
+    { id: 'start-verification', label: 'Start Verification' },
+    { id: 'webhooks', label: 'Webhook Events' }
+  ]},
+  { id: 'admin', label: 'Admin & Support', children: [
+    { id: 'admin-api', label: 'Admin API' },
+    { id: 'internal-api', label: 'Internal API' }
+  ]}
+]
+
 // Endpoints data
 const endpoints: Endpoint[] = [
   // Auth
@@ -398,14 +417,8 @@ const endpoints: Endpoint[] = [
   }
 ]
 
-// Format JSON for display
-function formatJSON(obj: object): string {
-  return JSON.stringify(obj, null, 2)
-}
-
 function App() {
   const [expandedEndpoints, setExpandedEndpoints] = useState<Set<string>>(new Set())
-  const [activeSection, setActiveSection] = useState('auth')
 
   const toggleEndpoint = (id: string) => {
     const newExpanded = new Set(expandedEndpoints)
@@ -417,33 +430,109 @@ function App() {
     setExpandedEndpoints(newExpanded)
   }
 
-  const scrollToEndpoint = (id: string) => {
-    setExpandedEndpoints(prev => new Set([...prev, id]))
-    const element = document.getElementById(`endpoint-${id}`)
-    element?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  const scrollTo = (id: string) => {
+    const element = document.getElementById(id)
+    element?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const sections = [
-    { 
-      id: 'client', 
-      title: 'Client Integration', 
-      isDefault: true,
-      subsections: [
-        { id: 'auth', title: 'Authentication', endpoints: ['oauth2-token'] },
-        { id: 'start-verification', title: 'Start Verification', endpoints: ['start-circuit'] },
-        { id: 'webhooks', title: 'Webhook Events', endpoints: [] }
-      ]
-    },
-    { 
-      id: 'admin', 
-      title: 'Admin & Support', 
-      isDefault: false,
-      subsections: [
-        { id: 'admin-api', title: 'Admin API', endpoints: ['admin-clients-create', 'admin-channels-create', 'admin-channels-get', 'admin-channels-update'] },
-        { id: 'internal-api', title: 'Internal API', endpoints: ['get-config', 'upload-url', 'process-circuit'] }
-      ]
-    }
-  ]
+  // Reusable endpoint card renderer
+  const renderEndpointCard = (endpoint: Endpoint) => (
+    <div
+      key={endpoint.id}
+      id={`endpoint-${endpoint.id}`}
+      className={`endpoint-card ${expandedEndpoints.has(endpoint.id) ? 'expanded' : ''}`}
+    >
+      <div className="endpoint-header" onClick={() => toggleEndpoint(endpoint.id)}>
+        <span className={`endpoint-method method-${endpoint.method.toLowerCase()}`}>
+          {endpoint.method}
+        </span>
+        <span className="endpoint-path">{endpoint.path}</span>
+        <span className="endpoint-description">{endpoint.description}</span>
+        <span className={`auth-badge ${endpoint.auth}`}>
+          {endpoint.auth === 'none' && endpoint.id === 'oauth2-token' && '🔑 client_id + client_secret'}
+          {endpoint.auth === 'bearer' && '🔐 Bearer token'}
+          {endpoint.auth === 'internal' && '🔐 x-internal-key'}
+          {endpoint.auth === 'admin' && '🔑 x-admin-key'}
+        </span>
+        <span className="endpoint-toggle">▼</span>
+      </div>
+      <div className="endpoint-details">
+        {endpoint.headers && (
+          <div className="endpoint-section">
+            <h4>Headers</h4>
+            <table className="params-table">
+              <thead>
+                <tr>
+                  <th>Header</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {endpoint.headers.map(h => (
+                  <tr key={h.name}>
+                    <td>
+                      <span className="param-name">{h.name}</span>
+                      {h.required && <span className="param-required">required</span>}
+                    </td>
+                    <td><code>{h.value}</code></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {endpoint.params && (
+          <div className="endpoint-section">
+            <h4>Path Parameters</h4>
+            <table className="params-table">
+              <thead>
+                <tr>
+                  <th>Parameter</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {endpoint.params.map(p => (
+                  <tr key={p.name}>
+                    <td>
+                      <span className="param-name">{p.name}</span>
+                      {p.required && <span className="param-required">required</span>}
+                    </td>
+                    <td><span className="param-type">{p.type}</span></td>
+                    <td>{p.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {endpoint.body && (
+          <div className="endpoint-section">
+            <h4>Request Body</h4>
+            <div className="code-wrapper">
+              <pre><code>{formatJSON(endpoint.body)}</code></pre>
+            </div>
+          </div>
+        )}
+        <div className="endpoint-section">
+          <h4>Response</h4>
+          <div className="response-block">
+            <span className="response-status success">● {endpoint.method === 'POST' ? '201 Created' : '200 OK'}</span>
+            <div className="code-wrapper">
+              <pre><code>{formatJSON(endpoint.response)}</code></pre>
+            </div>
+          </div>
+        </div>
+        <div className="endpoint-section">
+          <h4>cURL</h4>
+          <div className="code-wrapper">
+            <pre className="curl-block"><code>{endpoint.curl}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="app">
@@ -454,9 +543,11 @@ function App() {
           <span className="logo-badge">v1.0</span>
         </div>
         <nav className="header-nav">
-          <a href="#overview">Overview</a>
-          <a href="#getting-started">Getting Started</a>
-          <a href="#docs">Documentation</a>
+          {navItems.map(item => (
+            <a key={item.id} href={`#${item.id}`} onClick={(e) => { e.preventDefault(); scrollTo(item.id) }}>
+              {item.label}
+            </a>
+          ))}
         </nav>
       </header>
 
@@ -464,47 +555,34 @@ function App() {
       <div className="main-layout">
         {/* Sidebar */}
         <aside className="sidebar">
-          {sections.map(section => (
-            <div key={section.id} className="sidebar-section">
+          {navItems.map(item => (
+            <div key={item.id} className="sidebar-section">
               <div 
-                className={`sidebar-title ${activeSection === section.id ? 'active' : ''}`}
-                onClick={() => {
-                  setActiveSection(section.id)
-                  scrollToEndpoint(section.id)
-                }}
+                className="sidebar-title"
+                onClick={() => scrollTo(item.id)}
               >
-                {section.title}
+                {item.label}
               </div>
-              {section.subsections.map(subsection => (
-                <div key={subsection.id} style={{ marginLeft: '8px' }}>
-                  <div className="sidebar-subtitle">{subsection.title}</div>
-                  {subsection.endpoints.map(endpointId => {
-                    const endpoint = endpoints.find(e => e.id === endpointId)
-                    if (!endpoint) return null
-                    return (
-                      <div
-                        key={endpointId}
-                        className={`sidebar-item ${activeSection === section.id ? 'active' : ''}`}
-                        onClick={() => {
-                          setActiveSection(section.id)
-                          scrollToEndpoint(endpointId)
-                        }}
-                      >
-                        <span className={`method-badge method-${endpoint.method.toLowerCase()}`}>
-                          {endpoint.method}
-                        </span>
-                        <span>{endpoint.path.split('/').pop()?.replace('{id}', 'id').replace('{circuit_id}', 'id').replace('{channel_id}', 'id') || ''}</span>
-                      </div>
-                    )
-                  })}
+              {item.children && (
+                <div className="sidebar-children">
+                  {item.children.map(child => (
+                    <div
+                      key={child.id}
+                      className="sidebar-child"
+                      onClick={() => scrollTo(child.id)}
+                    >
+                      {child.label}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           ))}
         </aside>
 
         {/* Content */}
         <main className="content">
+          {/* Overview */}
           <div id="overview">
             <h1 className="page-title">biometric-api Documentation</h1>
             <p className="page-description">
@@ -517,336 +595,94 @@ function App() {
             />
           </div>
 
-          {/* Auth Section */}
-          <section id="docs">
-            <h1 className="page-title">API Reference</h1>
-            <h2 className="section-title">Authentication</h2>
-            {endpoints.filter(e => e.auth === 'none').map(endpoint => (
-              <div
-                key={endpoint.id}
-                id={`endpoint-${endpoint.id}`}
-                className={`endpoint-card ${expandedEndpoints.has(endpoint.id) ? 'expanded' : ''}`}
-              >
-                <div className="endpoint-header" onClick={() => toggleEndpoint(endpoint.id)}>
-                  <span className={`endpoint-method method-${endpoint.method.toLowerCase()}`}>
-                    {endpoint.method}
-                  </span>
-                  <span className="endpoint-path">{endpoint.path}</span>
-                  <span className="endpoint-description">{endpoint.description}</span>
-                  <span className={`auth-badge ${endpoint.auth}`}>
-                    {endpoint.auth === 'none' ? (endpoint.id === 'oauth2-token' ? '🔑 client_id + client_secret' : '🔓 Public') : ''}
-                    {endpoint.auth === 'internal' ? '🔐 x-internal-key' : ''}
-                  </span>
-                  <span className="endpoint-toggle">▼</span>
-                </div>
-                <div className="endpoint-details">
-                  {endpoint.headers && (
-                    <div className="endpoint-section">
-                      <h4>Headers</h4>
-                      <table className="params-table">
-                        <thead>
-                          <tr>
-                            <th>Header</th>
-                            <th>Value</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {endpoint.headers.map(h => (
-                            <tr key={h.name}>
-                              <td>
-                                <span className="param-name">{h.name}</span>
-                                {h.required && <span className="param-required">required</span>}
-                              </td>
-                              <td><code>{h.value}</code></td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {endpoint.body && (
-                    <div className="endpoint-section">
-                      <h4>Request Body</h4>
-                      <div className="code-wrapper">
-                        <pre><code>{formatJSON(endpoint.body)}</code></pre>
-                      </div>
-                    </div>
-                  )}
-                  <div className="endpoint-section">
-                    <h4>Response</h4>
-                    <div className="response-block">
-                      <span className="response-status success">● 201 Created</span>
-                      <div className="code-wrapper">
-                        <pre><code>{formatJSON(endpoint.response)}</code></pre>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="endpoint-section">
-                    <h4>cURL</h4>
-                    <div className="code-wrapper">
-                      <pre className="curl-block"><code>{endpoint.curl}</code></pre>
-                    </div>
-                  </div>
+          {/* Client Integration Section */}
+          <section id="client">
+            <h1 className="page-title">Client Integration</h1>
+            
+            <h2 id="auth">Authentication</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              Obtain an access token using the OAuth2 Client Credentials flow.
+            </p>
+            {endpoints.filter(e => e.id === 'oauth2-token').map(renderEndpointCard)}
+
+            <h2 id="start-verification">Start Verification</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              Start a new biometric verification circuit for a customer.
+            </p>
+            {endpoints.filter(e => e.id === 'start-circuit').map(renderEndpointCard)}
+
+            <h2 id="webhooks">Webhook Events</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              When a circuit reaches 'completed' or 'failed' status, a POST request is sent to the configured webhookUrl.
+            </p>
+            
+            <div className="endpoint-card expanded">
+              <div className="endpoint-section">
+                <h4>Webhook Payload - Success Example</h4>
+                <div className="code-wrapper">
+                  <pre><code>{formatJSON(webhookPayloadSuccess)}</code></pre>
                 </div>
               </div>
-            ))}
+              <div className="endpoint-section">
+                <h4>Webhook Payload - Failed Example</h4>
+                <div className="code-wrapper">
+                  <pre><code>{formatJSON(webhookPayloadFailed)}</code></pre>
+                </div>
+              </div>
+              <div className="endpoint-section">
+                <h4>Error Codes by Step</h4>
+                <table className="params-table">
+                  <thead>
+                    <tr>
+                      <th>Step</th>
+                      <th>Error Code</th>
+                      <th>Description</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(errorCodesDoc).map(([step, codes]) => (
+                      codes.map((code, idx) => (
+                        <tr key={`${step}-${code.errorCode}`}>
+                          <td><span className="param-name">{step}</span></td>
+                          <td><code>{code.errorCode}</code></td>
+                          <td>{code.description}</td>
+                        </tr>
+                      ))
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="endpoint-section">
+                <h4>Step Retry Behavior</h4>
+                <p style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                  When a step fails with retryable errors:
+                </p>
+                <ul style={{ marginLeft: '20px', color: 'var(--text-secondary)' }}>
+                  <li>The step is NOT added to steps_completed</li>
+                  <li>The circuit status remains 'in_progress'</li>
+                  <li>User must retry the failed step</li>
+                  <li>If maxAttempts is reached, circuit status changes to 'failed'</li>
+                </ul>
+              </div>
+            </div>
           </section>
 
-          {/* Admin API Section */}
-          <h2 className="section-title">Admin API</h2>
-          <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Endpoints for client and channel configuration. Require <code>x-admin-key</code> header.
-          </p>
-          {endpoints.filter(e => e.auth === 'admin').map(endpoint => (
-            <div
-              key={endpoint.id}
-              id={`endpoint-${endpoint.id}`}
-              className={`endpoint-card ${expandedEndpoints.has(endpoint.id) ? 'expanded' : ''}`}
-            >
-              <div className="endpoint-header" onClick={() => toggleEndpoint(endpoint.id)}>
-                <span className={`endpoint-method method-${endpoint.method.toLowerCase()}`}>
-                  {endpoint.method}
-                </span>
-                <span className="endpoint-path">{endpoint.path}</span>
-                <span className="endpoint-description">{endpoint.description}</span>
-                <span className={`auth-badge admin`}>🔑 x-admin-key</span>
-                <span className="endpoint-toggle">▼</span>
-              </div>
-              <div className="endpoint-details">
-                <div className="endpoint-section">
-                  <h4>Headers</h4>
-                  <table className="params-table">
-                    <thead>
-                      <tr>
-                        <th>Header</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {endpoint.headers?.map(h => (
-                        <tr key={h.name}>
-                          <td>
-                            <span className="param-name">{h.name}</span>
-                            {h.required && <span className="param-required">required</span>}
-                          </td>
-                          <td><code>{h.value}</code></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {endpoint.params && (
-                  <div className="endpoint-section">
-                    <h4>Path Parameters</h4>
-                    <table className="params-table">
-                      <thead>
-                        <tr>
-                          <th>Parameter</th>
-                          <th>Type</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {endpoint.params.map(p => (
-                          <tr key={p.name}>
-                            <td>
-                              <span className="param-name">{p.name}</span>
-                              {p.required && <span className="param-required">required</span>}
-                            </td>
-                            <td><span className="param-type">{p.type}</span></td>
-                            <td>{p.description}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {endpoint.body && (
-                  <div className="endpoint-section">
-                    <h4>Request Body</h4>
-                    <div className="code-wrapper">
-                      <pre><code>{formatJSON(endpoint.body)}</code></pre>
-                    </div>
-                  </div>
-                )}
-                <div className="endpoint-section">
-                  <h4>Response</h4>
-                  <div className="response-block">
-                    <span className="response-status success">● {endpoint.method === 'POST' ? '201 Created' : endpoint.method === 'PUT' ? '200 OK' : '200 OK'}</span>
-                    <div className="code-wrapper">
-                      <pre><code>{formatJSON(endpoint.response)}</code></pre>
-                    </div>
-                  </div>
-                </div>
-                <div className="endpoint-section">
-                  <h4>cURL</h4>
-                  <div className="code-wrapper">
-                    <pre className="curl-block"><code>{endpoint.curl}</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
+          {/* Admin & Support Section */}
+          <section id="admin">
+            <h1 className="page-title">Admin & Support</h1>
+            
+            <h2 id="admin-api">Admin API</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              Endpoints for client and channel configuration. Require <code>x-admin-key</code> header.
+            </p>
+            {endpoints.filter(e => e.auth === 'admin').map(renderEndpointCard)}
 
-          {/* Biometric API Section */}
-          <h2 className="section-title">Biometric API</h2>
-          <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            Endpoints for the biometric verification flow. The <code>get_config</code>, <code>upload-url</code>, and <code>process_circuit</code> endpoints use the <code>x-internal-key</code> header (for portal frontend use). The <code>start_circuit</code> endpoint uses Bearer token with scope <code>biometric-danaconnect/access</code>.
-          </p>
-          {endpoints.filter(e => e.auth === 'internal').map(endpoint => (
-            <div
-              key={endpoint.id}
-              id={`endpoint-${endpoint.id}`}
-              className={`endpoint-card ${expandedEndpoints.has(endpoint.id) ? 'expanded' : ''}`}
-            >
-              <div className="endpoint-header" onClick={() => toggleEndpoint(endpoint.id)}>
-                <span className={`endpoint-method method-${endpoint.method.toLowerCase()}`}>
-                  {endpoint.method}
-                </span>
-                <span className="endpoint-path">{endpoint.path}</span>
-                <span className="endpoint-description">{endpoint.description}</span>
-                <span className={`auth-badge internal`}>🔐 x-internal-key</span>
-                <span className="endpoint-toggle">▼</span>
-              </div>
-              <div className="endpoint-details">
-                <div className="endpoint-section">
-                  <h4>Headers</h4>
-                  <table className="params-table">
-                    <thead>
-                      <tr>
-                        <th>Header</th>
-                        <th>Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {endpoint.headers?.map(h => (
-                        <tr key={h.name}>
-                          <td>
-                            <span className="param-name">{h.name}</span>
-                            {h.required && <span className="param-required">required</span>}
-                          </td>
-                          <td><code>{h.value}</code></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {endpoint.params && (
-                  <div className="endpoint-section">
-                    <h4>Path / Query Parameters</h4>
-                    <table className="params-table">
-                      <thead>
-                        <tr>
-                          <th>Parameter</th>
-                          <th>Type</th>
-                          <th>Description</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {endpoint.params.map(p => (
-                          <tr key={p.name}>
-                            <td>
-                              <span className="param-name">{p.name}</span>
-                              {p.required && <span className="param-required">required</span>}
-                            </td>
-                            <td><span className="param-type">{p.type}</span></td>
-                            <td>{p.description}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {endpoint.body && (
-                  <div className="endpoint-section">
-                    <h4>Request Body</h4>
-                    <div className="code-wrapper">
-                      <pre><code>{formatJSON(endpoint.body)}</code></pre>
-                    </div>
-                  </div>
-                )}
-                <div className="endpoint-section">
-                  <h4>Response</h4>
-                  <div className="response-block">
-                    <span className="response-status success">● {endpoint.method === 'POST' ? '201 Created' : '200 OK'}</span>
-                    <div className="code-wrapper">
-                      <pre><code>{formatJSON(endpoint.response)}</code></pre>
-                    </div>
-                  </div>
-                </div>
-                <div className="endpoint-section">
-                  <h4>cURL</h4>
-                  <div className="code-wrapper">
-                    <pre className="curl-block"><code>{endpoint.curl}</code></pre>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {/* Webhook Section */}
-          <h2 className="section-title">Completion Webhook</h2>
-          <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            When a circuit is completed (status: 'completed' or 'failed'), a POST request is sent to the configured webhookUrl with the verification results.
-          </p>
-          <div className="endpoint-card expanded">
-            <div className="endpoint-section">
-              <h4>Webhook Payload - Success Example</h4>
-              <div className="code-wrapper">
-                <pre><code>{formatJSON(webhookPayloadSuccess)}</code></pre>
-              </div>
-            </div>
-            <div className="endpoint-section">
-              <h4>Webhook Payload - Failed Example</h4>
-              <div className="code-wrapper">
-                <pre><code>{formatJSON(webhookPayloadFailed)}</code></pre>
-              </div>
-            </div>
-          </div>
-
-          {/* Webhook Events Section */}
-          <h2 className="section-title">Webhook Events</h2>
-          <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            The webhook is triggered when a circuit reaches 'completed' or 'failed' status. Each step result includes an errorCode when applicable.
-          </p>
-          <div className="endpoint-card expanded">
-            <div className="endpoint-section">
-              <h4>Error Codes by Step</h4>
-              <table className="params-table">
-                <thead>
-                  <tr>
-                    <th>Step</th>
-                    <th>Error Code</th>
-                    <th>Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(errorCodesDoc).map(([step, codes]) => (
-                    codes.map((code, idx) => (
-                      <tr key={`${step}-${code.errorCode}`}>
-                        <td><span className="param-name">{step}</span></td>
-                        <td><code>{code.errorCode}</code></td>
-                        <td>{code.description}</td>
-                      </tr>
-                    ))
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="endpoint-section">
-              <h4>Step Retry Behavior</h4>
-              <p style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>
-                When a step fails with retryable errors (LOW_SIMILARITY, NO_FACE_IN_IMAGE, DATA_MISMATCH, NOT_A_DOCUMENT):
-              </p>
-              <ul style={{ marginLeft: '20px', color: 'var(--text-secondary)' }}>
-                <li>The step is NOT added to steps_completed</li>
-                <li>The circuit status remains 'in_progress'</li>
-                <li>For OCR-related failures (NOT_A_DOCUMENT, NO_FACE_IN_IMAGE, LOW_SIMILARITY), the user must re-upload the document</li>
-                <li>For data-verification failures (DATA_MISMATCH), the user must retry with corrected data</li>
-                <li>If maxAttempts is reached, the circuit status changes to 'failed' and the webhook is triggered</li>
-              </ul>
-            </div>
-          </div>
+            <h2 id="internal-api">Internal API</h2>
+            <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+              Internal endpoints for the biometric verification flow. Require <code>x-internal-key</code> header.
+            </p>
+            {endpoints.filter(e => e.auth === 'internal').map(renderEndpointCard)}
+          </section>
         </main>
       </div>
     </div>
