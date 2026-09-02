@@ -37,6 +37,7 @@ interface ProcessCircuitRequest {
   step: 'liveness' | 'ocr' | 'data-verification' | 'compare-faces';
   data?: StepData;
   geolocation?: string;
+  wamid?: string;
 }
 
 interface Person {
@@ -80,6 +81,7 @@ interface CircuitItem {
   expires_at: string;
   completed_at?: string;
   geolocation?: string;
+  wamid?: string;
   compare_faces_attempts?: number;
   data_verification_attempts?: number;
 }
@@ -415,6 +417,7 @@ async function callWebhook(webhookUrl: string, circuit: CircuitItem, channel: Ch
       status: circuit.status,
       person: circuit.person,
       geolocation: circuit.geolocation,
+      wamid: circuit.wamid,
       result: circuit.result,
       completedAt: circuit.completed_at,
     };
@@ -453,7 +456,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return errorResponse(400, 'Invalid JSON in request body');
     }
 
-    const { step, data, geolocation } = body;
+    const { step, data, geolocation, wamid } = body;
     const validSteps = ['liveness', 'ocr', 'data-verification', 'compare-faces'];
 
     if (!validSteps.includes(step)) {
@@ -734,6 +737,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       updateParts.push('#geolocation = :geolocation');
       expressionAttributeNames['#geolocation'] = 'geolocation';
       expressionAttributeValues[':geolocation'] = geolocation;
+    }
+
+    if (wamid && !circuit.wamid) {
+      updateParts.push('#wamid = :wamid');
+      expressionAttributeNames['#wamid'] = 'wamid';
+      expressionAttributeValues[':wamid'] = wamid;
     }
 
     // Build UpdateExpression with proper SET and REMOVE syntax
