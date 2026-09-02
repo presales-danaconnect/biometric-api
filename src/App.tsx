@@ -68,12 +68,12 @@ const livenessResult = {
 const ocrResult = {
   success: true,
   extractedData: {
-    nombre: 'JUAN PEREZ',
-    apellido: 'GARCIA',
+    nombre: 'JOHN',
+    apellido: 'DOE',
     documentNumber: '12345678',
-    fechaNacimiento: '1990-05-15',
-    fechaVencimiento: '2030-05-15',
-    nacionalidad: 'MEX'
+    fechaNacimiento: '01-01-1990',
+    fechaVencimiento: '01-01-2030',
+    nacionalidad: 'VENEZOLANO'
   }
 }
 
@@ -82,29 +82,81 @@ const dataVerificationResult = {
   matches: {
     documentNumber: true,
     name: true
-  }
+  },
+  confidence: 95,
+  reason: 'Document number and name match'
 }
 
 const compareFacesResult = {
   success: true,
-  similarity: 92
+  similarity: 91
 }
 
-// Webhook payload
-const webhookPayload = {
+// Webhook payload - Success example
+const webhookPayloadSuccess = {
   circuitId: '550e8400-e29b-41d4-a716-446655440000',
   channelId: '550e8400-e29b-41d4-a716-446655440001',
-  channelType: 'biometric',
+  channelType: 'full',
   status: 'completed',
-  person: personData,
-  geolocation: 'Calle Av. Principal 123, Ciudad de México, México',
+  person: {
+    name: 'John Doe',
+    documentNumber: '12345678',
+    email: 'john@example.com'
+  },
+  geolocation: 'Av. Principal 123, Ciudad de México, México',
+  wamid: 'wamid.xxx123',
   result: {
     liveness: livenessResult,
     ocr: ocrResult,
-    'data-verification': dataVerificationResult,
-    'compare-faces': compareFacesResult
+    'compare-faces': compareFacesResult,
+    'data-verification': dataVerificationResult
   },
-  completedAt: '2025-08-20T10:30:00.000Z'
+  completedAt: '2026-09-02T10:30:00.000Z'
+}
+
+// Webhook payload - Failed example
+const webhookPayloadFailed = {
+  circuitId: '550e8400-e29b-41d4-a716-446655440000',
+  channelId: '550e8400-e29b-41d4-a716-446655440001',
+  channelType: 'full',
+  status: 'failed',
+  person: {
+    name: 'John Doe',
+    documentNumber: '12345678',
+    email: 'john@example.com'
+  },
+  geolocation: 'Av. Principal 123, Ciudad de México, México',
+  wamid: 'wamid.xxx123',
+  result: {
+    liveness: livenessResult,
+    ocr: ocrResult,
+    'compare-faces': {
+      success: false,
+      errorCode: 'MAX_ATTEMPTS_REACHED',
+      similarity: 0
+    },
+    'data-verification': dataVerificationResult
+  },
+  completedAt: '2026-09-02T10:45:00.000Z'
+}
+
+// Error codes documentation
+const errorCodesDoc = {
+  liveness: [
+    { errorCode: '(none)', description: 'confidence < threshold → circuit status: failed' }
+  ],
+  ocr: [
+    { errorCode: 'NOT_A_DOCUMENT', description: 'Image is not a valid identity document' }
+  ],
+  'compare-faces': [
+    { errorCode: 'LOW_SIMILARITY', description: 'Faces do not match, similarity > 0' },
+    { errorCode: 'NO_FACE_IN_IMAGE', description: 'No face detected in the document' },
+    { errorCode: 'MAX_ATTEMPTS_REACHED', description: 'Max attempts exhausted → circuit status: failed' }
+  ],
+  'data-verification': [
+    { errorCode: 'DATA_MISMATCH', description: 'Data does not match person provided' },
+    { errorCode: 'MAX_ATTEMPTS_REACHED', description: 'Max attempts exhausted → circuit status: failed' }
+  ]
 }
 
 // Endpoints data
@@ -706,14 +758,64 @@ function App() {
           {/* Webhook Section */}
           <h2 className="section-title">Completion Webhook</h2>
           <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
-            When a circuit is completed, a POST is sent to the configured webhookUrl.
+            When a circuit is completed (status: 'completed' or 'failed'), a POST request is sent to the configured webhookUrl with the verification results.
           </p>
           <div className="endpoint-card expanded">
             <div className="endpoint-section">
-              <h4>Webhook Payload (POST to webhookUrl)</h4>
+              <h4>Webhook Payload - Success Example</h4>
               <div className="code-wrapper">
-                <pre><code>{formatJSON(webhookPayload)}</code></pre>
+                <pre><code>{formatJSON(webhookPayloadSuccess)}</code></pre>
               </div>
+            </div>
+            <div className="endpoint-section">
+              <h4>Webhook Payload - Failed Example</h4>
+              <div className="code-wrapper">
+                <pre><code>{formatJSON(webhookPayloadFailed)}</code></pre>
+              </div>
+            </div>
+          </div>
+
+          {/* Webhook Events Section */}
+          <h2 className="section-title">Webhook Events</h2>
+          <p style={{ marginBottom: '16px', color: 'var(--text-secondary)' }}>
+            The webhook is triggered when a circuit reaches 'completed' or 'failed' status. Each step result includes an errorCode when applicable.
+          </p>
+          <div className="endpoint-card expanded">
+            <div className="endpoint-section">
+              <h4>Error Codes by Step</h4>
+              <table className="params-table">
+                <thead>
+                  <tr>
+                    <th>Step</th>
+                    <th>Error Code</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(errorCodesDoc).map(([step, codes]) => (
+                    codes.map((code, idx) => (
+                      <tr key={`${step}-${code.errorCode}`}>
+                        <td><span className="param-name">{step}</span></td>
+                        <td><code>{code.errorCode}</code></td>
+                        <td>{code.description}</td>
+                      </tr>
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="endpoint-section">
+              <h4>Step Retry Behavior</h4>
+              <p style={{ marginBottom: '8px', color: 'var(--text-secondary)' }}>
+                When a step fails with retryable errors (LOW_SIMILARITY, NO_FACE_IN_IMAGE, DATA_MISMATCH, NOT_A_DOCUMENT):
+              </p>
+              <ul style={{ marginLeft: '20px', color: 'var(--text-secondary)' }}>
+                <li>The step is NOT added to steps_completed</li>
+                <li>The circuit status remains 'in_progress'</li>
+                <li>For OCR-related failures (NOT_A_DOCUMENT, NO_FACE_IN_IMAGE, LOW_SIMILARITY), the user must re-upload the document</li>
+                <li>For data-verification failures (DATA_MISMATCH), the user must retry with corrected data</li>
+                <li>If maxAttempts is reached, the circuit status changes to 'failed' and the webhook is triggered</li>
+              </ul>
             </div>
           </div>
         </main>
