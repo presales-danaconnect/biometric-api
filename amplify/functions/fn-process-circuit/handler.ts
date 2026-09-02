@@ -672,7 +672,9 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Handle NO_FACE_IN_IMAGE - reset OCR
     if (resetOcrResult) {
-      const newStepsCompleted = (circuit.steps_completed || []).filter((s) => s !== 'ocr');
+      const newStepsCompleted = (circuit.steps_completed || []).filter(
+        (s) => s !== 'ocr' && s !== 'compare-faces'
+      );
       console.log('Resetting OCR - current steps_completed:', circuit.steps_completed);
       console.log('Resetting OCR - new steps_completed:', newStepsCompleted);
       updateParts.push('#steps_completed = :newStepsCompleted');
@@ -681,6 +683,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       removeParts.push('#result.#ocr');
       expressionAttributeNames['#result'] = 'result';
       expressionAttributeNames['#ocr'] = 'ocr';
+      console.log('removeParts:', removeParts);
     }
 
     // Handle MAX_ATTEMPTS_REACHED - fail circuit
