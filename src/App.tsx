@@ -424,9 +424,25 @@ function App() {
   }
 
   const sections = [
-    { id: 'auth', title: 'Authentication', endpoints: ['oauth2-token'] },
-    { id: 'admin', title: 'Admin API', endpoints: ['admin-clients-create', 'admin-channels-create', 'admin-channels-get', 'admin-channels-update'] },
-    { id: 'biometric', title: 'Biometric API', endpoints: ['start-circuit', 'get-config', 'upload-url', 'process-circuit'] }
+    { 
+      id: 'client', 
+      title: 'Client Integration', 
+      isDefault: true,
+      subsections: [
+        { id: 'auth', title: 'Authentication', endpoints: ['oauth2-token'] },
+        { id: 'start-verification', title: 'Start Verification', endpoints: ['start-circuit'] },
+        { id: 'webhooks', title: 'Webhook Events', endpoints: [] }
+      ]
+    },
+    { 
+      id: 'admin', 
+      title: 'Admin & Support', 
+      isDefault: false,
+      subsections: [
+        { id: 'admin-api', title: 'Admin API', endpoints: ['admin-clients-create', 'admin-channels-create', 'admin-channels-get', 'admin-channels-update'] },
+        { id: 'internal-api', title: 'Internal API', endpoints: ['get-config', 'upload-url', 'process-circuit'] }
+      ]
+    }
   ]
 
   return (
@@ -450,26 +466,39 @@ function App() {
         <aside className="sidebar">
           {sections.map(section => (
             <div key={section.id} className="sidebar-section">
-              <div className="sidebar-title">{section.title}</div>
-              {section.endpoints.map(endpointId => {
-                const endpoint = endpoints.find(e => e.id === endpointId)
-                if (!endpoint) return null
-                return (
-                  <div
-                    key={endpointId}
-                    className={`sidebar-item ${activeSection === section.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveSection(section.id)
-                      scrollToEndpoint(endpointId)
-                    }}
-                  >
-                    <span className={`method-badge method-${endpoint.method.toLowerCase()}`}>
-                      {endpoint.method}
-                    </span>
-                    <span>{endpoint.path.split('/').pop()?.replace('{id}', 'id').replace('{circuit_id}', 'id').replace('{channel_id}', 'id') || ''}</span>
-                  </div>
-                )
-              })}
+              <div 
+                className={`sidebar-title ${activeSection === section.id ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveSection(section.id)
+                  scrollToEndpoint(section.id)
+                }}
+              >
+                {section.title}
+              </div>
+              {section.subsections.map(subsection => (
+                <div key={subsection.id} style={{ marginLeft: '8px' }}>
+                  <div className="sidebar-subtitle">{subsection.title}</div>
+                  {subsection.endpoints.map(endpointId => {
+                    const endpoint = endpoints.find(e => e.id === endpointId)
+                    if (!endpoint) return null
+                    return (
+                      <div
+                        key={endpointId}
+                        className={`sidebar-item ${activeSection === section.id ? 'active' : ''}`}
+                        onClick={() => {
+                          setActiveSection(section.id)
+                          scrollToEndpoint(endpointId)
+                        }}
+                      >
+                        <span className={`method-badge method-${endpoint.method.toLowerCase()}`}>
+                          {endpoint.method}
+                        </span>
+                        <span>{endpoint.path.split('/').pop()?.replace('{id}', 'id').replace('{circuit_id}', 'id').replace('{channel_id}', 'id') || ''}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
           ))}
         </aside>

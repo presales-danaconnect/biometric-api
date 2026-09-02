@@ -89,6 +89,25 @@
   letter-spacing: 0.5px;
   color: var(--text-muted);
   padding: 8px 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-title:hover {
+  color: var(--text-primary);
+}
+
+.sidebar-title.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.sidebar-subtitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 8px 20px 4px 28px;
+  margin-top: 8px;
 }
 
 .sidebar-item {
@@ -113,6 +132,10 @@
   color: var(--primary);
   border-left-color: var(--primary);
   font-weight: 500;
+}
+
+.sidebar-section.expanded .sidebar-title {
+  color: var(--primary);
 }
 
 .method-badge {
