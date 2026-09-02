@@ -616,11 +616,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
                 errorCode: 'MAX_ATTEMPTS_REACHED',
               };
             } else {
-              // Keep original error with similarity
+              // Reset OCR for retry
               if (!stepResult.errorCode) {
                 stepResult.errorCode = 'LOW_SIMILARITY';
               }
-              incrementAttemptsOnly = true;
+              stepResult.retryStep = 'ocr';
+              resetOcr = true;
             }
           }
         }
