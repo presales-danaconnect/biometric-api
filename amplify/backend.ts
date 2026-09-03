@@ -1,6 +1,6 @@
 import { defineBackend } from '@aws-amplify/backend';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
-import { SecretStringGenerator } from 'aws-cdk-lib/aws-secretsmanager';
+import { SecretValue, Stack, Tags } from 'aws-cdk-lib';
 import { createCognitoUserPool, getCognitoTokenUrl } from './auth/resource';
 import { createChannelsTable, createCircuitsTable } from './data/resource';
 import { createApiGateway, ApiLambdaFunctions } from './api/resource';
@@ -14,7 +14,6 @@ import { createUploadUrlFunction } from './functions/fn-upload-url/resource';
 import { createProcessCircuitFunction } from './functions/fn-process-circuit/resource';
 import { createAdminUpdateDanaconnectFunction } from './functions/fn-admin-update-danaconnect/resource';
 import { createDocumentsBucket } from './storage/resource';
-import { Stack, Tags } from 'aws-cdk-lib';
 
 const backend = defineBackend({});
 
@@ -24,7 +23,7 @@ const region = Stack.of(backend.stack).region;
 // Create Secrets Manager secret for DANAconnect credentials
 const danaconnectSecret = new secretsmanager.Secret(backend.stack, 'DanaconnectCredentials', {
   secretName: `biometric/${env}/danaconnect-credentials`,
-  secretStringValue: SecretStringGenerator.fromSecretString('{}'),
+  secretStringValue: SecretValue.unsafePlainText('{}'),
 });
 
 // Create DynamoDB tables
