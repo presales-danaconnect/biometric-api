@@ -782,15 +782,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       const newStepsCompleted = (circuit.steps_completed || []).filter(
         (s) => s !== 'ocr' && s !== 'compare-faces'
       );
-      console.log('Resetting OCR - current steps_completed:', circuit.steps_completed);
-      console.log('Resetting OCR - new steps_completed:', newStepsCompleted);
       updateParts.push('#steps_completed = :newStepsCompleted');
       expressionAttributeNames['#steps_completed'] = 'steps_completed';
       expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
       removeParts.push('#result.#ocr');
       expressionAttributeNames['#result'] = 'result';
       expressionAttributeNames['#ocr'] = 'ocr';
-      console.log('removeParts:', removeParts);
     }
 
     // Handle MAX_ATTEMPTS_REACHED - fail circuit
@@ -814,8 +811,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         const newStepsCompleted = (circuit.steps_completed || []).filter(
           (s) => s !== 'ocr' && s !== 'data-verification'
         );
-        console.log('Resetting DV - current steps_completed:', circuit.steps_completed);
-        console.log('Resetting DV - new steps_completed:', newStepsCompleted);
         updateParts.push('#steps_completed = :newStepsCompleted');
         expressionAttributeNames['#steps_completed'] = 'steps_completed';
         expressionAttributeValues[':newStepsCompleted'] = newStepsCompleted;
@@ -860,13 +855,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     } else if (removeClause) {
       updateExpression = removeClause;
     }
-
-    // Debug logging
-    console.log('UpdateExpression:', updateExpression);
-    console.log('incrementAttemptsOnly:', incrementAttemptsOnly);
-    console.log('noFaceInImage:', noFaceInImage);
-    console.log('updateParts:', JSON.stringify(updateParts));
-    console.log('compare_faces_attempts before:', circuit.compare_faces_attempts);
 
     // Update circuit
     const updateCommand = new UpdateItemCommand({

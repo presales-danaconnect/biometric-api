@@ -149,13 +149,23 @@ export function createApiGateway(
   // /api/admin
   const adminResource = apiResource.addResource('admin');
 
+  // /api/admin/clients
+  const clientsResource = adminResource.addResource('clients');
+
   // POST /api/admin/clients/create
   const adminClientsCreateIntegration = safeIntegration(lambdas?.adminClientsCreate);
   if (adminClientsCreateIntegration) {
-    adminResource
-      .addResource('clients')
+    clientsResource
       .addResource('create')
       .addMethod('POST', adminClientsCreateIntegration, noAuthOptions);
+  }
+
+  // PUT /api/admin/clients/{code_client}/danaconnect
+  const codeClientResource = clientsResource.addResource('{code_client}');
+  const danaconnectResource = codeClientResource.addResource('danaconnect');
+  const adminDanaconnectIntegration = safeIntegration(lambdas?.adminDanaconnectUpdate);
+  if (adminDanaconnectIntegration) {
+    danaconnectResource.addMethod('PUT', adminDanaconnectIntegration, noAuthOptions);
   }
 
   // /api/admin/channels
@@ -180,15 +190,6 @@ export function createApiGateway(
   const adminChannelsUpdateIntegration = safeIntegration(lambdas?.adminChannelsUpdate);
   if (adminChannelsUpdateIntegration) {
     channelIdResource.addMethod('PUT', adminChannelsUpdateIntegration, noAuthOptions);
-  }
-
-  // PUT /api/admin/clients/{code_client}/danaconnect
-  const clientsResource = adminResource.addResource('clients');
-  const codeClientResource = clientsResource.addResource('{code_client}');
-  const danaconnectResource = codeClientResource.addResource('danaconnect');
-  const adminDanaconnectIntegration = safeIntegration(lambdas?.adminDanaconnectUpdate);
-  if (adminDanaconnectIntegration) {
-    danaconnectResource.addMethod('PUT', adminDanaconnectIntegration, noAuthOptions);
   }
 
   // Force deployment to depend on authorizer
