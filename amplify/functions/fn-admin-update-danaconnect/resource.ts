@@ -14,7 +14,7 @@ export function createAdminUpdateDanaconnectFunction(
   channelsTable: Table,
   danaconnectSecret: Secret
 ): NodejsFunction {
-  const functionName = `biometric-${env}-fn-admin-update-danaconnect`;
+  const functionName = `biometric-api-${env}-fn-admin-update-danaconnect`;
 
   const fn = new NodejsFunction(scope, 'FnAdminUpdateDanaconnect', {
     functionName,
