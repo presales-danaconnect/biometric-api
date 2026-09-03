@@ -482,7 +482,8 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
 
     // Get OAuth token
     const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-    const tokenResponse = await fetch('https://auth.danaconnect.com/oauth2/token', {
+    const authUrl = process.env.DANACONNECT_AUTH_URL || 'https://auth.danaconnect.com/oauth2/token';
+    const tokenResponse = await fetch(authUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${authHeader}`,
@@ -505,7 +506,8 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
     }
 
     // Call DANAconnect API
-    const apiResponse = await fetch(`https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID/${projectId}/start/data`, {
+    const apiBaseUrl = process.env.DANACONNECT_API_URL || 'https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID';
+    const apiResponse = await fetch(`${apiBaseUrl}/${projectId}/start/data`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,

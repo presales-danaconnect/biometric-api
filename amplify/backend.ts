@@ -26,7 +26,6 @@ const danaconnectSecret = new secretsmanager.Secret(backend.stack, 'DanaconnectC
   secretName: `biometric/${env}/danaconnect-credentials`,
   secretStringValue: SecretStringGenerator.fromSecretString('{}'),
 });
-danaconnectSecret.node.addDependency(backend.auth.resources?.userPool || backend.auth);
 
 // Create DynamoDB tables
 const channelsTable = createChannelsTable(backend.stack);

@@ -38,6 +38,8 @@ export function createProcessCircuitFunction(
       COMPARE_FACES_THRESHOLD: '80',
       INTERNAL_KEY: process.env.INTERNAL_KEY || '',
       DANACONNECT_SECRET_NAME: danaconnectSecret?.secretName || '',
+      DANACONNECT_AUTH_URL: process.env.DANACONNECT_AUTH_URL || 'https://auth.danaconnect.com/oauth2/token',
+      DANACONNECT_API_URL: process.env.DANACONNECT_API_URL || 'https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID',
     },
   });
 
