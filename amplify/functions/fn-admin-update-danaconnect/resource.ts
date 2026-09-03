@@ -22,6 +22,7 @@ export function createAdminUpdateDanaconnectFunction(
     timeout: Duration.seconds(10),
     memorySize: 256,
     environment: {
+      ADMIN_KEY: process.env.ADMIN_KEY || 'default-admin-key-change-me',
       DANACONNECT_SECRET_NAME: danaconnectSecret.secretName,
       DANACONNECT_AUTH_URL: process.env.DANACONNECT_AUTH_URL || 'https://auth.danaconnect.com/oauth2/token',
       DANACONNECT_API_URL: process.env.DANACONNECT_API_URL || 'https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID',
