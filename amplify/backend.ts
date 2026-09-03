@@ -44,7 +44,10 @@ Tags.of(backend.stack).add('Environment', env);
 Tags.of(backend.stack).add('Owner', 'danaconnect');
 
 // Create Lambda functions for Admin API
-const fnAdminCreateClient = createAdminCreateClientFunction(backend.stack);
+const fnAdminCreateClient = createAdminCreateClientFunction(
+  backend.stack,
+  danaconnectSecret
+);
 const fnAdminCreateChannel = createAdminCreateChannelFunction(
   backend.stack,
   channelsTable
@@ -59,7 +62,6 @@ const fnAdminUpdateChannel = createAdminUpdateChannelFunction(
 );
 const fnAdminUpdateDanaconnect = createAdminUpdateDanaconnectFunction(
   backend.stack,
-  channelsTable,
   danaconnectSecret
 );
 

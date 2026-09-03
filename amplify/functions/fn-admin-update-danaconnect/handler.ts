@@ -1,38 +1,11 @@
 import type { APIGatewayProxyHandler } from 'aws-lambda';
-import {
-  DynamoDBClient,
-  UpdateItemCommand,
-  GetItemCommand,
-} from '@aws-sdk/client-dynamodb';
-import { unmarshall } from '@aws-sdk/util-dynamodb';
 import { SecretsManagerClient, GetSecretValueCommand, UpdateSecretCommand } from '@aws-sdk/client-secrets-manager';
 
-const dynamoClient = new DynamoDBClient({});
 const secretsClient = new SecretsManagerClient({});
 
 interface UpdateDanaconnectRequest {
   clientId: string;
   clientSecret: string;
-}
-
-interface ChannelItem {
-  channel_id: string;
-  code_client: string;
-  settings: {
-    steps?: string[];
-    baseUrl?: string;
-    webhookUrl?: string;
-    projectId?: string;
-    redirectUrl?: string;
-    ui?: Record<string, unknown>;
-    thresholds?: {
-      livenessConfidenceThreshold: number;
-      compareFacesSimilarityThreshold: number;
-      ocrConfidenceThreshold: number;
-      maxAttempts: number;
-      requiresBackDocument: boolean;
-    };
-  };
 }
 
 interface DanaconnectCredentials {
@@ -48,13 +21,7 @@ const corsHeaders = {
   'Content-Type': 'application/json',
 };
 
-interface ErrorResponse {
-  statusCode: number;
-  headers: Record<string, string>;
-  body: string;
-}
-
-function errorResponse(statusCode: number, message: string): ErrorResponse {
+function errorResponse(statusCode: number, message: string) {
   return {
     statusCode,
     headers: corsHeaders,
@@ -92,53 +59,27 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return errorResponse(400, 'clientId and clientSecret are required');
     }
 
-    const channelsTableName = process.env.CHANNELS_TABLE_NAME;
     const secretName = process.env.DANACONNECT_SECRET_NAME;
-
-    if (!channelsTableName || !secretName) {
-      return errorResponse(500, 'Missing environment variables');
-    }
-
-    // Check if channel exists for this code_client
-    const getChannelCommand = new GetItemCommand({
-      TableName: channelsTableName,
-      Key: { channel_id: { S: codeClient } },
-    });
-
-    const channelResponse = await dynamoClient.send(getChannelCommand);
-    if (!channelResponse.Item) {
-      return errorResponse(404, 'Channel not found for this code_client');
-    }
-
-    const channel = unmarshall(channelResponse.Item) as ChannelItem;
-
-    // Verify the channel has projectId configured for DANAconnect
-    if (!channel.settings.projectId) {
-      return errorResponse(400, 'Channel does not have projectId configured for DANAconnect');
+    if (!secretName) {
+      return errorResponse(500, 'Missing environment variable: DANACONNECT_SECRET_NAME');
     }
 
     // Get current secrets
-    const getSecretCommand = new GetSecretValueCommand({
-      SecretId: secretName,
-    });
-
+    const getSecretCommand = new GetSecretValueCommand({ SecretId: secretName });
     const secretResponse = await secretsClient.send(getSecretCommand);
+
     let credentials: DanaconnectCredentials = {};
-    
+
     if (secretResponse.SecretString) {
       try {
         credentials = JSON.parse(secretResponse.SecretString);
       } catch {
-        // If parsing fails, start with empty object
         credentials = {};
       }
     }
 
     // Update credentials for this code_client
-    credentials[codeClient] = {
-      clientId,
-      clientSecret,
-    };
+    credentials[codeClient] = { clientId, clientSecret };
 
     // Save updated credentials
     const updateSecretCommand = new UpdateSecretCommand({
@@ -154,7 +95,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       body: JSON.stringify({
         message: 'DANAconnect credentials updated successfully',
         code_client: codeClient,
-        projectId: channel.settings.projectId,
       }),
     };
   } catch (error) {

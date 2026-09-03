@@ -1,8 +1,9 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Tags } from 'aws-cdk-lib';
 
 function getEnv(): string {
@@ -10,7 +11,8 @@ function getEnv(): string {
 }
 
 export function createAdminCreateClientFunction(
-  scope: Construct
+  scope: Construct,
+  danaconnectSecret?: Secret
 ): NodejsFunction {
   const env = getEnv();
   const functionName = `biometric-api-${env}-fn-admin-create-client`;
@@ -25,6 +27,7 @@ export function createAdminCreateClientFunction(
     environment: {
       ADMIN_KEY: process.env.ADMIN_KEY || 'default-admin-key-change-me',
       USER_POOL_ID: process.env.USER_POOL_ID || '',
+      DANACONNECT_SECRET_NAME: danaconnectSecret?.secretName || '',
     },
   });
 
@@ -38,6 +41,20 @@ export function createAdminCreateClientFunction(
       resources: ['*'],
     })
   );
+
+  // IAM policy for Secrets Manager (DANAconnect credentials)
+  if (danaconnectSecret) {
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: [
+          'secretsmanager:GetSecretValue',
+          'secretsmanager:UpdateSecret',
+        ],
+        resources: [danaconnectSecret.secretArn],
+      })
+    );
+  }
 
   Tags.of(fn).add('Project', 'biometric-api');
   Tags.of(fn).add('Environment', env);

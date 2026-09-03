@@ -4,17 +4,41 @@ import {
   CreateUserPoolClientCommand,
   ListUserPoolClientsCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+  UpdateSecretCommand,
+} from '@aws-sdk/client-secrets-manager';
 
 const cognitoClient = new CognitoIdentityProviderClient({});
+const secretsClient = new SecretsManagerClient({});
 
 interface CreateClientRequest {
   code_client: string;
   username: string;
+  danaconnect?: {
+    clientId: string;
+    clientSecret: string;
+  };
 }
+
+interface DanaconnectCredentials {
+  [code_client: string]: {
+    clientId: string;
+    clientSecret: string;
+  };
+}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,x-admin-key',
+  'Content-Type': 'application/json',
+};
 
 function errorResponse(statusCode: number, message: string) {
   return {
     statusCode,
+    headers: corsHeaders,
     body: JSON.stringify({ error: message }),
   };
 }
@@ -35,7 +59,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return errorResponse(400, 'Invalid JSON in request body');
     }
 
-    const { code_client, username } = body;
+    const { code_client, username, danaconnect } = body;
     if (!code_client || !username) {
       return errorResponse(400, 'Missing required fields: code_client, username');
     }
@@ -81,8 +105,43 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return errorResponse(500, 'Failed to create Cognito App Client');
     }
 
+    // Save DANAconnect credentials if provided
+    if (danaconnect?.clientId && danaconnect?.clientSecret) {
+      const secretName = process.env.DANACONNECT_SECRET_NAME;
+      if (secretName) {
+        try {
+          const getSecretCommand = new GetSecretValueCommand({ SecretId: secretName });
+          const secretResponse = await secretsClient.send(getSecretCommand);
+
+          let credentials: DanaconnectCredentials = {};
+          if (secretResponse.SecretString) {
+            try {
+              credentials = JSON.parse(secretResponse.SecretString);
+            } catch {
+              credentials = {};
+            }
+          }
+
+          credentials[code_client] = {
+            clientId: danaconnect.clientId,
+            clientSecret: danaconnect.clientSecret,
+          };
+
+          const updateSecretCommand = new UpdateSecretCommand({
+            SecretId: secretName,
+            SecretString: JSON.stringify(credentials),
+          });
+
+          await secretsClient.send(updateSecretCommand);
+        } catch (error) {
+          console.error('Error saving DANAconnect credentials:', error);
+        }
+      }
+    }
+
     return {
       statusCode: 201,
+      headers: corsHeaders,
       body: JSON.stringify({
         clientId: createResponse.UserPoolClient.ClientId,
         clientSecret: createResponse.UserPoolClient.ClientSecret,
