@@ -1,4 +1,6 @@
 import { defineBackend } from '@aws-amplify/backend';
+import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import { SecretStringGenerator } from 'aws-cdk-lib/aws-secretsmanager';
 import { createCognitoUserPool, getCognitoTokenUrl } from './auth/resource';
 import { createChannelsTable, createCircuitsTable } from './data/resource';
 import { createApiGateway, ApiLambdaFunctions } from './api/resource';
@@ -10,6 +12,7 @@ import { createGetConfigFunction } from './functions/fn-get-config/resource';
 import { createStartCircuitFunction } from './functions/fn-start-circuit/resource';
 import { createUploadUrlFunction } from './functions/fn-upload-url/resource';
 import { createProcessCircuitFunction } from './functions/fn-process-circuit/resource';
+import { createAdminUpdateDanaconnectFunction } from './functions/fn-admin-update-danaconnect/resource';
 import { createDocumentsBucket } from './storage/resource';
 import { Stack, Tags } from 'aws-cdk-lib';
 
@@ -17,6 +20,13 @@ const backend = defineBackend({});
 
 const env = process.env.AWS_BRANCH || 'dev';
 const region = Stack.of(backend.stack).region;
+
+// Create Secrets Manager secret for DANAconnect credentials
+const danaconnectSecret = new secretsmanager.Secret(backend.stack, 'DanaconnectCredentials', {
+  secretName: `biometric/${env}/danaconnect-credentials`,
+  secretStringValue: SecretStringGenerator.fromSecretString('{}'),
+});
+danaconnectSecret.node.addDependency(backend.auth.resources?.userPool || backend.auth);
 
 // Create DynamoDB tables
 const channelsTable = createChannelsTable(backend.stack);
@@ -49,6 +59,11 @@ const fnAdminUpdateChannel = createAdminUpdateChannelFunction(
   backend.stack,
   channelsTable
 );
+const fnAdminUpdateDanaconnect = createAdminUpdateDanaconnectFunction(
+  backend.stack,
+  channelsTable,
+  danaconnectSecret
+);
 
 // Create Lambda functions for Biometric API
 const fnGetConfig = createGetConfigFunction(
@@ -71,7 +86,8 @@ const fnProcessCircuit = createProcessCircuitFunction(
   backend.stack,
   documentsBucket,
   circuitsTable,
-  channelsTable
+  channelsTable,
+  danaconnectSecret
 );
 
 // Create API Gateway with Lambda integrations
@@ -80,6 +96,7 @@ const lambdas: ApiLambdaFunctions = {
   adminChannelsCreate: fnAdminCreateChannel,
   adminChannelsGet: fnAdminGetChannel,
   adminChannelsUpdate: fnAdminUpdateChannel,
+  adminDanaconnectUpdate: fnAdminUpdateDanaconnect,
   getConfig: fnGetConfig,
   startCircuit: fnStartCircuit,
   uploadUrl: fnUploadUrl,
@@ -114,6 +131,7 @@ backend.addOutput({
     fnAdminCreateChannelName: fnAdminCreateChannel.functionName,
     fnAdminGetChannelName: fnAdminGetChannel.functionName,
     fnAdminUpdateChannelName: fnAdminUpdateChannel.functionName,
+    fnAdminUpdateDanaconnectName: fnAdminUpdateDanaconnect.functionName,
     fnGetConfigName: fnGetConfig.functionName,
     fnStartCircuitName: fnStartCircuit.functionName,
     fnUploadUrlName: fnUploadUrl.functionName,

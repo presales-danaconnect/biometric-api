@@ -1,10 +1,11 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Table as DynamoTable } from 'aws-cdk-lib/aws-dynamodb';
+import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Tags } from 'aws-cdk-lib';
 
 function getEnv(): string {
@@ -15,7 +16,8 @@ export function createProcessCircuitFunction(
   scope: Construct,
   documentsBucket: IBucket,
   circuitsTable: DynamoTable,
-  channelsTable: DynamoTable
+  channelsTable: DynamoTable,
+  danaconnectSecret?: Secret
 ): NodejsFunction {
   const env = getEnv();
   const functionName = `biometric-api-${env}-fn-process-circuit`;
@@ -35,6 +37,7 @@ export function createProcessCircuitFunction(
       LIVENESS_THRESHOLD: '80',
       COMPARE_FACES_THRESHOLD: '80',
       INTERNAL_KEY: process.env.INTERNAL_KEY || '',
+      DANACONNECT_SECRET_NAME: danaconnectSecret?.secretName || '',
     },
   });
 
@@ -68,6 +71,17 @@ export function createProcessCircuitFunction(
 
   // Add IAM permissions for S3
   documentsBucket.grantReadWrite(fn);
+
+  // Add IAM permissions for Secrets Manager (DANAconnect credentials)
+  if (danaconnectSecret) {
+    fn.addToRolePolicy(
+      new PolicyStatement({
+        effect: Effect.ALLOW,
+        actions: ['secretsmanager:GetSecretValue'],
+        resources: [danaconnectSecret.secretArn],
+      })
+    );
+  }
 
   // Apply tags
   Tags.of(fn).add('Project', 'biometric-api');

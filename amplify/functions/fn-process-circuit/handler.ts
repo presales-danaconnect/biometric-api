@@ -19,6 +19,10 @@ import {
   GetObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+} from '@aws-sdk/client-secrets-manager';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Readable } from 'stream';
@@ -28,6 +32,7 @@ const dynamoClient = new DynamoDBClient({});
 const rekognitionClient = new RekognitionClient({});
 const bedrockClient = new BedrockRuntimeClient({ region: process.env.AWS_REGION || 'us-east-1' });
 const s3Client = new S3Client({});
+const secretsClient = new SecretsManagerClient({});
 
 interface StepData {
   sessionId?: string;
@@ -92,6 +97,7 @@ interface ChannelSettings {
   webhookUrl?: string;
   projectId?: string;
   redirectUrl?: string;
+  isProject?: boolean;
   ui: Record<string, unknown>;
   thresholds: {
     livenessConfidenceThreshold: number;
@@ -429,6 +435,101 @@ async function callWebhook(webhookUrl: string, circuit: CircuitItem, channel: Ch
     });
   } catch (error) {
     console.error('Error calling webhook:', error);
+  }
+}
+
+interface DanaconnectCredentials {
+  clientId: string;
+  clientSecret: string;
+}
+
+async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Promise<void> {
+  try {
+    const secretName = process.env.DANACONNECT_SECRET_NAME;
+    if (!secretName) {
+      console.error('DANACONNECT_SECRET_NAME not configured');
+      return;
+    }
+
+    // Get credentials from Secrets Manager
+    const getSecretCommand = new GetSecretValueCommand({ SecretId: secretName });
+    const secretResponse = await secretsClient.send(getSecretCommand);
+
+    let credentials: Record<string, DanaconnectCredentials> = {};
+    if (secretResponse.SecretString) {
+      try {
+        credentials = JSON.parse(secretResponse.SecretString);
+      } catch (e) {
+        console.error('Failed to parse DANAconnect credentials:', e);
+        return;
+      }
+    }
+
+    // Get credentials for this client
+    const clientCredentials = credentials[channel.code_client];
+    if (!clientCredentials) {
+      console.error(`No DANAconnect credentials found for client: ${channel.code_client}`);
+      return;
+    }
+
+    const { clientId, clientSecret } = clientCredentials;
+    const projectId = channel.settings.projectId;
+
+    if (!projectId) {
+      console.error('DANAconnect projectId not configured for channel:', channel.channel_id);
+      return;
+    }
+
+    // Get OAuth token
+    const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+    const tokenResponse = await fetch('https://auth.danaconnect.com/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${authHeader}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: 'grant_type=client_credentials&scope=conversation:access2api',
+    });
+
+    if (!tokenResponse.ok) {
+      console.error('Failed to get DANAconnect OAuth token:', tokenResponse.statusText);
+      return;
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      console.error('No access_token in DANAconnect response');
+      return;
+    }
+
+    // Call DANAconnect API
+    const apiResponse = await fetch(`https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID/${projectId}/start/data`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        EMAIL: circuit.person?.email || '',
+        NAME: circuit.person?.name || '',
+        CIRCUIT_ID: circuit.circuit_id,
+        STATUS: circuit.status,
+        GEOLOCATION: circuit.geolocation || '',
+        RESULT: JSON.stringify(circuit.result),
+        WAMID: circuit.wamid || '',
+      }),
+    });
+
+    if (!apiResponse.ok) {
+      console.error('Failed to call DANAconnect API:', apiResponse.statusText);
+      return;
+    }
+
+    console.log('DANAconnect API called successfully for circuit:', circuit.circuit_id);
+  } catch (error) {
+    console.error('Error calling DANAconnect API:', error);
   }
 }
 
@@ -781,6 +882,18 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     // Call webhook if completed or failed
     if ((updatedCircuit.status === 'completed' || updatedCircuit.status === 'failed') && channel.settings.webhookUrl) {
       await callWebhook(channel.settings.webhookUrl, updatedCircuit, channel);
+    }
+
+    // Call DANAconnect API if circuit completed and channel has isProject enabled (fire and forget)
+    if (updatedCircuit.status === 'completed' && channel.settings.isProject === true) {
+      if (!channel.settings.projectId) {
+        console.error('isProject=true but projectId missing for channel:', channel.channel_id);
+      } else {
+        // Fire and forget - no await
+        callDanaconnect(channel, updatedCircuit).catch((err) =>
+          console.error('Danaconnect integration error:', err)
+        );
+      }
     }
 
     const response: ProcessCircuitResponse = {

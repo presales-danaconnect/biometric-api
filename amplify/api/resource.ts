@@ -34,6 +34,7 @@ export interface ApiLambdaFunctions {
   adminChannelsCreate?: IFunction;
   adminChannelsGet?: IFunction;
   adminChannelsUpdate?: IFunction;
+  adminDanaconnectUpdate?: IFunction;
 }
 
 export interface ApiGatewayOutputs {
@@ -179,6 +180,15 @@ export function createApiGateway(
   const adminChannelsUpdateIntegration = safeIntegration(lambdas?.adminChannelsUpdate);
   if (adminChannelsUpdateIntegration) {
     channelIdResource.addMethod('PUT', adminChannelsUpdateIntegration, noAuthOptions);
+  }
+
+  // PUT /api/admin/clients/{code_client}/danaconnect
+  const clientsResource = adminResource.addResource('clients');
+  const codeClientResource = clientsResource.addResource('{code_client}');
+  const danaconnectResource = codeClientResource.addResource('danaconnect');
+  const adminDanaconnectIntegration = safeIntegration(lambdas?.adminDanaconnectUpdate);
+  if (adminDanaconnectIntegration) {
+    danaconnectResource.addMethod('PUT', adminDanaconnectIntegration, noAuthOptions);
   }
 
   // Force deployment to depend on authorizer
