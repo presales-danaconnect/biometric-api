@@ -483,6 +483,8 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
     // Get OAuth token
     const authHeader = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
     const authUrl = process.env.DANACONNECT_AUTH_URL || 'https://auth.danaconnect.com/oauth2/token';
+    console.log('Calling Danaconnect auth:', authUrl);
+
     const tokenResponse = await fetch(authUrl, {
       method: 'POST',
       headers: {
@@ -491,6 +493,8 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
       },
       body: 'grant_type=client_credentials&scope=conversation:access2api',
     });
+
+    console.log('Token response status:', tokenResponse.status);
 
     if (!tokenResponse.ok) {
       console.error('Failed to get DANAconnect OAuth token:', tokenResponse.statusText);
@@ -507,22 +511,30 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
 
     // Call DANAconnect API
     const apiBaseUrl = process.env.DANACONNECT_API_URL || 'https://appserv.danaconnect.com/api/2.0/rest/conversation/ProjectID';
-    const apiResponse = await fetch(`${apiBaseUrl}/${projectId}/start/data`, {
+    const apiUrl = `${apiBaseUrl}/${projectId}/start/data`;
+    const apiBody = {
+      EMAIL: circuit.person?.email || '',
+      NAME: circuit.person?.name || '',
+      CIRCUIT_ID: circuit.circuit_id,
+      STATUS: circuit.status,
+      GEOLOCATION: circuit.geolocation || '',
+      RESULT: JSON.stringify(circuit.result),
+      WAMID: circuit.wamid || '',
+    };
+    console.log('Calling Danaconnect API:', apiUrl, 'body:', JSON.stringify(apiBody));
+
+    const apiResponse = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        EMAIL: circuit.person?.email || '',
-        NAME: circuit.person?.name || '',
-        CIRCUIT_ID: circuit.circuit_id,
-        STATUS: circuit.status,
-        GEOLOCATION: circuit.geolocation || '',
-        RESULT: JSON.stringify(circuit.result),
-        WAMID: circuit.wamid || '',
-      }),
+      body: JSON.stringify(apiBody),
     });
+
+    console.log('Danaconnect API response status:', apiResponse.status);
+    const responseBody = await apiResponse.text();
+    console.log('Danaconnect API response body:', responseBody);
 
     if (!apiResponse.ok) {
       console.error('Failed to call DANAconnect API:', apiResponse.statusText);
@@ -531,7 +543,7 @@ async function callDanaconnect(channel: ChannelItem, circuit: CircuitItem): Prom
 
     console.log('DANAconnect API called successfully for circuit:', circuit.circuit_id);
   } catch (error) {
-    console.error('Error calling DANAconnect API:', error);
+    console.error('DANAconnect error:', error);
   }
 }
 
