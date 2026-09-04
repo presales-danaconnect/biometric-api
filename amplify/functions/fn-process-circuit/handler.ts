@@ -785,10 +785,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     const resetOcrResult = resetOcr;
     const incrementOnly = (stepResult as StepResult & { incrementOnly?: boolean }).incrementOnly;
 
-    // Always add compare_faces_attempts to update
-    updateParts.push('#compare_faces_attempts = :attempts');
-    expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
-    expressionAttributeValues[':attempts'] = attempts;
+    // Only update compare_faces_attempts when current step is compare-faces
+    if (step === 'compare-faces') {
+      updateParts.push('#compare_faces_attempts = :attempts');
+      expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
+      expressionAttributeValues[':attempts'] = attempts;
+    }
 
     // Handle NO_FACE_IN_IMAGE - reset OCR
     if (resetOcrResult) {
