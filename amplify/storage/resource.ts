@@ -18,6 +18,7 @@ export function createDocumentsBucket(scope: Construct): DocumentsBucketOutput {
   const bucket = new Bucket(scope, 'DocumentsBucket', {
     bucketName,
     removalPolicy: RemovalPolicy.DESTROY,
+    autoDeleteObjects: true,
     cors: [
       {
         allowedOrigins: ['*'], // Configure based on requirements
