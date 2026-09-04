@@ -891,8 +891,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       await callWebhook(channel.settings.webhookUrl, updatedCircuit, channel);
     }
 
-    // Call DANAconnect API if circuit completed and channel has isProject enabled
-    if (updatedCircuit.status === 'completed' && channel.settings.isProject === true) {
+    // Call DANAconnect API if circuit completed or failed and channel has isProject enabled
+    if ((updatedCircuit.status === 'completed' || updatedCircuit.status === 'failed') && channel.settings.isProject === true) {
       if (!channel.settings.projectId) {
         console.error('isProject=true but projectId missing for channel:', channel.channel_id);
       } else {
