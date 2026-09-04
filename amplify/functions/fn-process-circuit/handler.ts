@@ -870,6 +870,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     // Update circuit
+    console.log('DynamoDB update - attempts value:', attempts, 'circuit.compare_faces_attempts:', circuit.compare_faces_attempts);
     const updateCommand = new UpdateItemCommand({
       TableName: circuitsTableName,
       Key: { circuit_id: { S: circuitId } },
@@ -881,6 +882,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const updateResponse = await dynamoClient.send(updateCommand);
     const updatedCircuit = unmarshall(updateResponse.Attributes || {}) as CircuitItem;
+    console.log('DynamoDB update response - new compare_faces_attempts:', updatedCircuit.compare_faces_attempts);
 
     // Call webhook if completed or failed
     if ((updatedCircuit.status === 'completed' || updatedCircuit.status === 'failed') && channel.settings.webhookUrl) {
