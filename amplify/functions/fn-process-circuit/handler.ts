@@ -707,6 +707,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         // Calculate new attempts value
         attempts = (circuit.compare_faces_attempts || 0) + 1;
         const maxAttempts = channel.settings.thresholds.maxAttempts;
+        console.log('compare-faces attempts:', attempts, 'maxAttempts:', maxAttempts, 'stepResult.errorCode:', stepResult.errorCode, 'stepResult.similarity:', (stepResult as any).similarity);
 
         // Handle failures
         if (!stepResult.success) {
