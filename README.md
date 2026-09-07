@@ -60,8 +60,7 @@ Biometric SDK as a service (SaaS) that allows any company to integrate identity 
 |----------|-------------|---------------|
 | `ADMIN_KEY` | Key for admin endpoints (Postman support team) | `openssl rand -base64 32` |
 | `INTERNAL_KEY` | Key for internal portal endpoints (frontend calls) | `openssl rand -base64 32` |
-
-> All other environment variables (USER_POOL_ID, CHANNELS_TABLE_NAME, CIRCUITS_TABLE_NAME, DANACONNECT_SECRET_NAME, etc.) are automatically injected by CDK at deploy time.
+| `USER_POOL_ID` | Cognito User Pool ID | Amplify Console outputs after first deploy |
 
 ## Installation
 
