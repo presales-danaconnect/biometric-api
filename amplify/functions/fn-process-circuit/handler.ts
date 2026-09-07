@@ -89,6 +89,7 @@ interface CircuitItem {
   wamid?: string;
   compare_faces_attempts?: number;
   data_verification_attempts?: number;
+  liveness_attempts?: number;
 }
 
 interface ChannelSettings {
@@ -624,6 +625,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     let incrementAttemptsOnly = false;
     let attempts = 0;
     let dataVerificationAttempts = 0;
+    let livenessAttempts = 0;
     let resetOcrForDv = false;
 
     // Validate step is in channel's steps
@@ -660,6 +662,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           documentsBucketName,
           circuitId
         );
+
+        // Calculate new attempts value for liveness
+        const livenessAttempts = (circuit.liveness_attempts || 0) + 1;
+        const livenessMaxAttempts = channel.settings.thresholds.maxAttempts;
+
+        // Handle liveness failure with retry
+        if (!stepResult.success) {
+          if (livenessAttempts >= livenessMaxAttempts) {
+            // Max attempts reached, fail circuit
+            stepResult = {
+              success: false,
+              errorCode: 'MAX_ATTEMPTS_REACHED',
+            };
+          } else {
+            // Retry allowed
+            stepResult.errorCode = 'LIVENESS_FAILED';
+          }
+        }
         break;
 
       case 'ocr':
@@ -788,6 +808,13 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       updateParts.push('#compare_faces_attempts = :attempts');
       expressionAttributeNames['#compare_faces_attempts'] = 'compare_faces_attempts';
       expressionAttributeValues[':attempts'] = attempts;
+    }
+
+    // Only update liveness_attempts when current step is liveness
+    if (step === 'liveness') {
+      updateParts.push('#liveness_attempts = :livenessAttempts');
+      expressionAttributeNames['#liveness_attempts'] = 'liveness_attempts';
+      expressionAttributeValues[':livenessAttempts'] = livenessAttempts;
     }
 
     // Handle NO_FACE_IN_IMAGE - reset OCR
