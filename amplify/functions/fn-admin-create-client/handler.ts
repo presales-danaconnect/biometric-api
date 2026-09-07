@@ -10,6 +10,7 @@ import {
   PutPublicAccessBlockCommand,
   PutBucketEncryptionCommand,
   PutBucketTaggingCommand,
+  PutBucketCorsCommand,
 } from '@aws-sdk/client-s3';
 import {
   SecretsManagerClient,
@@ -161,6 +162,24 @@ export const handler: APIGatewayProxyHandler = async (event) => {
               { Key: 'Project', Value: 'biometric-api' },
               { Key: 'Client', Value: code_client },
               { Key: 'Environment', Value: env },
+            ],
+          },
+        })
+      );
+
+      // Set CORS
+      await s3Client.send(
+        new PutBucketCorsCommand({
+          Bucket: bucketName,
+          CORSConfiguration: {
+            CORSRules: [
+              {
+                AllowedHeaders: ['*'],
+                AllowedMethods: ['GET', 'PUT', 'POST', 'DELETE', 'HEAD'],
+                AllowedOrigins: ['*'],
+                ExposeHeaders: ['ETag'],
+                MaxAgeSeconds: 3000,
+              },
             ],
           },
         })
