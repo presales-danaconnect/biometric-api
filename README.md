@@ -60,7 +60,8 @@ Biometric SDK as a service (SaaS) that allows any company to integrate identity 
 |----------|-------------|---------------|
 | `ADMIN_KEY` | Key for admin endpoints (Postman support team) | `openssl rand -base64 32` |
 | `INTERNAL_KEY` | Key for internal portal endpoints (frontend calls) | `openssl rand -base64 32` |
-| `USER_POOL_ID` | Cognito User Pool ID | Amplify Console outputs after first deploy |
+
+> All other environment variables (USER_POOL_ID, CHANNELS_TABLE_NAME, CIRCUITS_TABLE_NAME, DANACONNECT_SECRET_NAME, etc.) are automatically injected by CDK at deploy time.
 
 ## Installation
 
@@ -209,7 +210,7 @@ biometric-api/
 |----------|------|-------------|
 | DynamoDB | `biometric-api-{env}-channels` | Channel configuration per client |
 | DynamoDB | `biometric-api-{env}-circuits` | Verification history |
-| S3 | `biometric-api-{env}-documents` | Biometric images per tenant/circuit |
+| S3 | `biometric-{env}-{code_client}-documents` | One bucket per client, created automatically when a new client is registered via POST /api/admin/clients/create |
 | Cognito User Pool | `biometric-api-{env}-userpool` | Machine-to-machine authentication |
 | Cognito Domain | `biometric-api-{env}` | OAuth2 token endpoint |
 | API Gateway | `biometric-api-{env}-gateway` | Public and admin REST endpoints |
