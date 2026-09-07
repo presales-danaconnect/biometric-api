@@ -656,7 +656,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         }
         stepResult = await getLivenessResult(
           data.sessionId,
-          channel.settings.thresholds.livenessConfidenceThreshold,
+          channel.settings.thresholds.livenessConfidenceThreshold || 80,
           documentsBucketName,
           circuitId
         );
