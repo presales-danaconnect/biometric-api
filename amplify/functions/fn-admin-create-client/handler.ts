@@ -7,8 +7,8 @@ import {
 import {
   S3Client,
   CreateBucketCommand,
-  PutBucketPublicAccessBlockCommand,
-  PutEncryptionConfigurationCommand,
+  PutPublicAccessBlockCommand,
+  PutBucketEncryptionCommand,
   PutBucketTaggingCommand,
 } from '@aws-sdk/client-s3';
 import {
@@ -125,7 +125,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
       // Block public access
       await s3Client.send(
-        new PutBucketPublicAccessBlockCommand({
+        new PutPublicAccessBlockCommand({
           Bucket: bucketName,
           PublicAccessBlockConfiguration: {
             BlockPublicAcls: true,
@@ -138,7 +138,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
       // Set encryption (AES256)
       await s3Client.send(
-        new PutEncryptionConfigurationCommand({
+        new PutBucketEncryptionCommand({
           Bucket: bucketName,
           ServerSideEncryptionConfiguration: {
             Rules: [
