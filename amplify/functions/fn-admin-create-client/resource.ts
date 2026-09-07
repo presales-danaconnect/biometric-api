@@ -49,8 +49,9 @@ export function createAdminCreateClientFunction(
       actions: [
         's3:CreateBucket',
         's3:PutBucketPublicAccessBlock',
-        's3:PutEncryptionConfiguration',
+        's3:PutBucketEncryption',
         's3:PutBucketTagging',
+        's3:PutBucketCORS',
       ],
       resources: ['arn:aws:s3:::biometric-*'],
     })
