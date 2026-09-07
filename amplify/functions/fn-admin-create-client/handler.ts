@@ -77,7 +77,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const clientName = `${code_client}-client`;
     const env = process.env.AWS_BRANCH || 'main';
-    const bucketName = `biometric-${env}-${code_client}-documents`;
+    const bucketName = `biometric-api-${env}-${code_client}-documents`;
 
     // Verificar si ya existe un App Client con ese nombre
     const listResponse = await cognitoClient.send(

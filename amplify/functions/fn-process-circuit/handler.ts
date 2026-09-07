@@ -617,7 +617,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Build per-client bucket name
     const env = process.env.AWS_BRANCH || 'main';
-    const documentsBucketName = `biometric-${env}-${channel.code_client}-documents`;
+    const documentsBucketName = `biometric-api-${env}-${channel.code_client}-documents`;
 
     // Initialize flags for compare-faces retry logic
     let resetOcr = false;

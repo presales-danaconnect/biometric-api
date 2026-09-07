@@ -121,7 +121,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Build bucket name for this client
     const env = process.env.AWS_BRANCH || 'main';
-    const bucketName = `biometric-${env}-${channel.code_client}-documents`;
+    const bucketName = `biometric-api-${env}-${channel.code_client}-documents`;
 
     // Build S3 key: {circuit_id}/{type}.jpg (bucket already has code_client prefix)
     const s3Key = `${circuitId}/${type}.jpg`;
