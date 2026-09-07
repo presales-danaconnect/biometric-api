@@ -625,7 +625,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     let incrementAttemptsOnly = false;
     let attempts = 0;
     let dataVerificationAttempts = 0;
-    let livenessAttempts = 0;
     let resetOcrForDv = false;
 
     // Validate step is in channel's steps
@@ -650,6 +649,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     // Execute step
     let stepResult: StepResult;
+    let livenessAttempts = 0;
 
     switch (step) {
       case 'liveness':
@@ -664,7 +664,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         );
 
         // Calculate new attempts value for liveness
-        const livenessAttempts = (circuit.liveness_attempts || 0) + 1;
+        livenessAttempts = (circuit.liveness_attempts || 0) + 1;
         const livenessMaxAttempts = channel.settings.thresholds.maxAttempts;
 
         // Handle liveness failure with retry
