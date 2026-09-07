@@ -190,7 +190,6 @@ async function getLivenessResult(
   sessionId: string,
   threshold: number,
   bucket: string,
-  codeClient: string,
   circuitId: string
 ): Promise<StepResult> {
   const command = new GetFaceLivenessSessionResultsCommand({ SessionId: sessionId });
@@ -206,7 +205,7 @@ async function getLivenessResult(
   // Save reference image to S3 if liveness is successful
   let s3Key: string | undefined;
   if (success && response.ReferenceImage?.Bytes) {
-    s3Key = `${codeClient}/${circuitId}/liveness-reference.jpg`;
+    s3Key = `${circuitId}/liveness-reference.jpg`;
     await uploadToS3(bucket, s3Key, Buffer.from(response.ReferenceImage.Bytes), 'image/jpeg');
   }
 
@@ -218,8 +217,8 @@ async function getLivenessResult(
   };
 }
 
-async function performOcr(bucket: string, codeClient: string, circuitId: string, requiresBack: boolean): Promise<StepResult> {
-  const frontImage = await downloadS3Object(bucket, `${codeClient}/${circuitId}/front.jpg`);
+async function performOcr(bucket: string, circuitId: string, requiresBack: boolean): Promise<StepResult> {
+  const frontImage = await downloadS3Object(bucket, `${circuitId}/front.jpg`);
   if (!frontImage) {
     return { success: false, error: 'front.jpg not found in S3' };
   }
@@ -228,7 +227,7 @@ async function performOcr(bucket: string, codeClient: string, circuitId: string,
   let backImage: Buffer | null = null;
 
   if (requiresBack) {
-    backImage = await downloadS3Object(bucket, `${codeClient}/${circuitId}/back.jpg`);
+    backImage = await downloadS3Object(bucket, `${circuitId}/back.jpg`);
     if (backImage) {
       images.push(backImage.toString('base64'));
     }
@@ -369,16 +368,15 @@ Responde SOLO con un JSON sin texto adicional:
 
 async function performCompareFaces(
   bucket: string,
-  codeClient: string,
   circuitId: string,
   threshold: number
 ): Promise<StepResult> {
-  const referenceImage = await downloadS3Object(bucket, `${codeClient}/${circuitId}/liveness-reference.jpg`);
+  const referenceImage = await downloadS3Object(bucket, `${circuitId}/liveness-reference.jpg`);
   if (!referenceImage) {
     return { success: false, error: 'liveness-reference.jpg not found (run liveness first)' };
   }
 
-  const frontImage = await downloadS3Object(bucket, `${codeClient}/${circuitId}/front.jpg`);
+  const frontImage = await downloadS3Object(bucket, `${circuitId}/front.jpg`);
   if (!frontImage) {
     return { success: false, error: 'front.jpg not found' };
   }
@@ -580,11 +578,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const circuitsTableName = process.env.CIRCUITS_TABLE_NAME;
     const channelsTableName = process.env.CHANNELS_TABLE_NAME;
-    const documentsBucketName = process.env.DOCUMENTS_BUCKET_NAME;
     const livenessThreshold = parseInt(process.env.LIVENESS_THRESHOLD || '80', 10);
     const compareFacesThreshold = parseInt(process.env.COMPARE_FACES_THRESHOLD || '80', 10);
 
-    if (!circuitsTableName || !channelsTableName || !documentsBucketName) {
+    if (!circuitsTableName || !channelsTableName) {
       return errorResponse(500, 'Missing environment variables');
     }
 
@@ -617,6 +614,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     }
 
     const channel = unmarshall(channelResponse.Item) as ChannelItem;
+
+    // Build per-client bucket name
+    const env = process.env.AWS_BRANCH || 'main';
+    const documentsBucketName = `biometric-${env}-${channel.code_client}-documents`;
 
     // Initialize flags for compare-faces retry logic
     let resetOcr = false;
@@ -657,7 +658,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
           data.sessionId,
           channel.settings.thresholds.livenessConfidenceThreshold,
           documentsBucketName,
-          channel.code_client,
           circuitId
         );
         break;
@@ -665,7 +665,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       case 'ocr':
         stepResult = await performOcr(
           documentsBucketName,
-          channel.code_client,
           circuitId,
           channel.settings.thresholds.requiresBackDocument
         );
@@ -699,7 +698,6 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       case 'compare-faces':
         stepResult = await performCompareFaces(
           documentsBucketName,
-          channel.code_client,
           circuitId,
           channel.settings.thresholds.compareFacesSimilarityThreshold
         );

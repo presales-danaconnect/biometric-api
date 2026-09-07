@@ -5,12 +5,20 @@ import {
   ListUserPoolClientsCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import {
+  S3Client,
+  CreateBucketCommand,
+  PutBucketPublicAccessBlockCommand,
+  PutEncryptionConfigurationCommand,
+  PutBucketTaggingCommand,
+} from '@aws-sdk/client-s3';
+import {
   SecretsManagerClient,
   GetSecretValueCommand,
   UpdateSecretCommand,
 } from '@aws-sdk/client-secrets-manager';
 
 const cognitoClient = new CognitoIdentityProviderClient({});
+const s3Client = new S3Client({});
 const secretsClient = new SecretsManagerClient({});
 
 interface CreateClientRequest {
@@ -68,6 +76,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     if (!userPoolId) return errorResponse(500, 'Missing USER_POOL_ID environment variable');
 
     const clientName = `${code_client}-client`;
+    const env = process.env.AWS_BRANCH || 'main';
+    const bucketName = `biometric-${env}-${code_client}-documents`;
 
     // Verificar si ya existe un App Client con ese nombre
     const listResponse = await cognitoClient.send(
@@ -103,6 +113,63 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     if (!createResponse.UserPoolClient?.ClientId || !createResponse.UserPoolClient?.ClientSecret) {
       return errorResponse(500, 'Failed to create Cognito App Client');
+    }
+
+    // Create S3 bucket for this client
+    try {
+      await s3Client.send(
+        new CreateBucketCommand({
+          Bucket: bucketName,
+        })
+      );
+
+      // Block public access
+      await s3Client.send(
+        new PutBucketPublicAccessBlockCommand({
+          Bucket: bucketName,
+          PublicAccessBlockConfiguration: {
+            BlockPublicAcls: true,
+            BlockPublicPolicy: true,
+            IgnorePublicAcls: true,
+            RestrictPublicBuckets: true,
+          },
+        })
+      );
+
+      // Set encryption (AES256)
+      await s3Client.send(
+        new PutEncryptionConfigurationCommand({
+          Bucket: bucketName,
+          ServerSideEncryptionConfiguration: {
+            Rules: [
+              {
+                ApplyServerSideEncryptionByDefault: {
+                  SSEAlgorithm: 'AES256',
+                },
+              },
+            ],
+          },
+        })
+      );
+
+      // Add tags
+      await s3Client.send(
+        new PutBucketTaggingCommand({
+          Bucket: bucketName,
+          Tagging: {
+            TagSet: [
+              { Key: 'Project', Value: 'biometric-api' },
+              { Key: 'Client', Value: code_client },
+              { Key: 'Environment', Value: env },
+            ],
+          },
+        })
+      );
+
+      console.log(`S3 bucket created: ${bucketName}`);
+    } catch (s3Error) {
+      console.error('Error creating S3 bucket:', s3Error);
+      // Continue - bucket creation failure shouldn't fail client creation
     }
 
     // Save DANAconnect credentials if provided
@@ -145,6 +212,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       body: JSON.stringify({
         clientId: createResponse.UserPoolClient.ClientId,
         clientSecret: createResponse.UserPoolClient.ClientSecret,
+        bucketName,
       }),
     };
   } catch (error) {

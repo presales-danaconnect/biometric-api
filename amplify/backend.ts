@@ -13,7 +13,6 @@ import { createStartCircuitFunction } from './functions/fn-start-circuit/resourc
 import { createUploadUrlFunction } from './functions/fn-upload-url/resource';
 import { createProcessCircuitFunction } from './functions/fn-process-circuit/resource';
 import { createAdminUpdateDanaconnectFunction } from './functions/fn-admin-update-danaconnect/resource';
-import { createDocumentsBucket } from './storage/resource';
 
 const backend = defineBackend({});
 
@@ -29,9 +28,6 @@ const danaconnectSecret = new secretsmanager.Secret(backend.stack, 'DanaconnectC
 // Create DynamoDB tables
 const channelsTable = createChannelsTable(backend.stack);
 const circuitsTable = createCircuitsTable(backend.stack);
-
-// Create S3 bucket for documents
-const { bucket: documentsBucket, bucketName } = createDocumentsBucket(backend.stack);
 
 // Create Cognito User Pool for machine-to-machine auth
 const { userPool, userPoolDomain, userPoolClient } = createCognitoUserPool(
@@ -78,13 +74,11 @@ const fnStartCircuit = createStartCircuitFunction(
 );
 const fnUploadUrl = createUploadUrlFunction(
   backend.stack,
-  documentsBucket,
   circuitsTable,
   channelsTable
 );
 const fnProcessCircuit = createProcessCircuitFunction(
   backend.stack,
-  documentsBucket,
   circuitsTable,
   channelsTable,
   danaconnectSecret
@@ -115,8 +109,6 @@ backend.addOutput({
     // DynamoDB table names
     channelsTableName: channelsTable.tableName,
     circuitsTableName: circuitsTable.tableName,
-    // S3 bucket
-    documentsBucketName: bucketName,
     // Cognito configuration
     userPoolId: userPool.userPoolId,
     userPoolDomain: userPoolDomain,

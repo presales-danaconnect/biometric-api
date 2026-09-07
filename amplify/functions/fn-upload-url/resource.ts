@@ -1,9 +1,8 @@
 import { Construct } from 'constructs';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
-import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Table as DynamoTable } from 'aws-cdk-lib/aws-dynamodb';
 import { Tags } from 'aws-cdk-lib';
 
@@ -13,7 +12,6 @@ function getEnv(): string {
 
 export function createUploadUrlFunction(
   scope: Construct,
-  documentsBucket: IBucket,
   circuitsTable: DynamoTable,
   channelsTable: DynamoTable
 ): NodejsFunction {
@@ -28,15 +26,23 @@ export function createUploadUrlFunction(
     timeout: Duration.seconds(10),
     memorySize: 256,
     environment: {
-      DOCUMENTS_BUCKET_NAME: documentsBucket.bucketName,
       CIRCUITS_TABLE_NAME: circuitsTable.tableName,
       CHANNELS_TABLE_NAME: channelsTable.tableName,
       INTERNAL_KEY: process.env.INTERNAL_KEY || '',
     },
   });
 
-  // Add IAM permissions for S3
-  documentsBucket.grantWrite(fn);
+  // Add IAM permissions for S3 (per-client buckets)
+  fn.addToRolePolicy(
+    new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        's3:PutObject',
+        's3:GetObject',
+      ],
+      resources: ['arn:aws:s3:::biometric-*/*'],
+    })
+  );
 
   // Add IAM permissions for DynamoDB
   circuitsTable.grantReadData(fn);

@@ -22,8 +22,8 @@ export function createAdminCreateClientFunction(
     entry: './amplify/functions/fn-admin-create-client/handler.ts',
     runtime: Runtime.NODEJS_20_X,
     handler: 'handler',
-    timeout: Duration.seconds(10),
-    memorySize: 256,
+    timeout: Duration.seconds(30),
+    memorySize: 512,
     environment: {
       ADMIN_KEY: process.env.ADMIN_KEY || 'default-admin-key-change-me',
       USER_POOL_ID: process.env.USER_POOL_ID || '',
@@ -39,6 +39,20 @@ export function createAdminCreateClientFunction(
         'cognito-idp:ListUserPoolClients',
       ],
       resources: ['*'],
+    })
+  );
+
+  // IAM policy for S3 (per-client buckets)
+  fn.addToRolePolicy(
+    new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        's3:CreateBucket',
+        's3:PutBucketPublicAccessBlock',
+        's3:PutEncryptionConfiguration',
+        's3:PutBucketTagging',
+      ],
+      resources: ['arn:aws:s3:::biometric-*'],
     })
   );
 

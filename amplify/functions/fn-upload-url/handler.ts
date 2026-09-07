@@ -75,11 +75,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       return errorResponse(400, 'Missing or invalid type query parameter (front or back)');
     }
 
-    const bucketName = process.env.DOCUMENTS_BUCKET_NAME;
     const circuitsTableName = process.env.CIRCUITS_TABLE_NAME;
     const channelsTableName = process.env.CHANNELS_TABLE_NAME;
 
-    if (!bucketName || !circuitsTableName || !channelsTableName) {
+    if (!circuitsTableName || !channelsTableName) {
       return errorResponse(500, 'Missing environment variables');
     }
 
@@ -120,8 +119,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     const channel = unmarshall(channelResponse.Item) as ChannelItem;
 
-    // Build S3 key: {code_client}/{circuit_id}/{type}.jpg
-    const s3Key = `${channel.code_client}/${circuitId}/${type}.jpg`;
+    // Build bucket name for this client
+    const env = process.env.AWS_BRANCH || 'main';
+    const bucketName = `biometric-${env}-${channel.code_client}-documents`;
+
+    // Build S3 key: {circuit_id}/{type}.jpg (bucket already has code_client prefix)
+    const s3Key = `${circuitId}/${type}.jpg`;
 
     // Generate presigned URL for PUT
     const command = new PutObjectCommand({

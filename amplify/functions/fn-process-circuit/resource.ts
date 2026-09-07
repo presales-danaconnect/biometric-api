@@ -3,7 +3,6 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import { PolicyStatement, Effect } from 'aws-cdk-lib/aws-iam';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
-import { IBucket } from 'aws-cdk-lib/aws-s3';
 import { Table as DynamoTable } from 'aws-cdk-lib/aws-dynamodb';
 import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { Tags } from 'aws-cdk-lib';
@@ -14,7 +13,6 @@ function getEnv(): string {
 
 export function createProcessCircuitFunction(
   scope: Construct,
-  documentsBucket: IBucket,
   circuitsTable: DynamoTable,
   channelsTable: DynamoTable,
   danaconnectSecret?: Secret
@@ -32,7 +30,6 @@ export function createProcessCircuitFunction(
     environment: {
       CIRCUITS_TABLE_NAME: circuitsTable.tableName,
       CHANNELS_TABLE_NAME: channelsTable.tableName,
-      DOCUMENTS_BUCKET_NAME: documentsBucket.bucketName,
       BEDROCK_MODEL_ID: 'us.anthropic.claude-sonnet-4-5-20250929-v1:0',
       LIVENESS_THRESHOLD: '80',
       COMPARE_FACES_THRESHOLD: '80',
@@ -71,8 +68,17 @@ export function createProcessCircuitFunction(
     })
   );
 
-  // Add IAM permissions for S3
-  documentsBucket.grantReadWrite(fn);
+  // Add IAM permissions for S3 (per-client buckets)
+  fn.addToRolePolicy(
+    new PolicyStatement({
+      effect: Effect.ALLOW,
+      actions: [
+        's3:GetObject',
+        's3:PutObject',
+      ],
+      resources: ['arn:aws:s3:::biometric-*/*'],
+    })
+  );
 
   // Add IAM permissions for Secrets Manager (DANAconnect credentials)
   if (danaconnectSecret) {
