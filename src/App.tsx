@@ -166,6 +166,7 @@ function formatJSON(obj: object): string {
 
 // Navigation items
 const navItems = [
+  { id: 'product', label: 'Producto' },
   { id: 'overview', label: 'Overview' },
   { id: 'client', label: 'Client Integration', children: [
     { id: 'auth', label: 'Authentication' },
@@ -582,6 +583,81 @@ function App() {
 
         {/* Content */}
         <main className="content">
+          {/* Product Section */}
+          <section id="product">
+            {/* Hero */}
+            <div className="product-hero">
+              <div className="hero-badge">SDK Biométrico como Servicio</div>
+              <h1 className="hero-title">Verificación de Identidad para tu Aplicación</h1>
+              <p className="hero-subtitle">
+                Integra liveness detection, OCR de documentos y comparación facial 
+                en minutos mediante una API REST moderna.
+              </p>
+              <div className="hero-buttons">
+                <button className="hero-btn primary" onClick={() => scrollTo('client')}>
+                  Ver Documentación
+                </button>
+              </div>
+            </div>
+
+            {/* Features */}
+            <div className="product-features">
+              <div className="feature-card">
+                <div className="feature-icon">🔌</div>
+                <h3 className="feature-title">Simple de integrar</h3>
+                <p className="feature-description">
+                  Solo 2 endpoints para el cliente: autenticación y start_circuit. 
+                  El portal frontend maneja el resto.
+                </p>
+              </div>
+              <div className="feature-card">
+                <div className="feature-icon">⚙️</div>
+                <h3 className="feature-title">Configurable por caso de uso</h3>
+                <p className="feature-description">
+                  Combina liveness, OCR, comparación facial y verificación de datos 
+                  según tu necesidad.
+                </p>
+              </div>
+              <div className="feature-card">
+                <div className="feature-icon">⚡</div>
+                <h3 className="feature-title">Resultados en tiempo real</h3>
+                <p className="feature-description">
+                  Webhook instantáneo cuando la verificación completa o falla, 
+                  con resultado detallado por paso.
+                </p>
+              </div>
+            </div>
+
+            {/* Use Cases */}
+            <h2 className="use-cases-title">Casos de uso</h2>
+            <div className="use-cases-grid">
+              <div className="use-case-card">
+                <div className="use-case-icon">💬</div>
+                <h3 className="use-case-title">WhatsApp</h3>
+                <p className="use-case-description">
+                  Inicia verificaciones directamente desde conversaciones de WhatsApp 
+                  usando el parámetro wamid.
+                </p>
+              </div>
+              <div className="use-case-card">
+                <div className="use-case-icon">📱</div>
+                <h3 className="use-case-title">Onboarding Digital</h3>
+                <p className="use-case-description">
+                  Verifica la identidad de nuevos clientes antes de 
+                  activar su cuenta.
+                </p>
+              </div>
+              <div className="use-case-card">
+                <div className="use-case-icon">📋</div>
+                <h3 className="use-case-title">KYC / Cumplimiento</h3>
+                <p className="use-case-description">
+                  Cumple requisitos regulatorios con verificación 
+                  biométrica auditable.
+                </p>
+              </div>
+            </div>
+          </section>
+
           {/* Overview */}
           <div id="overview">
             <h1 className="page-title">biometric-api Documentation</h1>

@@ -430,3 +430,201 @@
     display: none;
   }
 }
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+
+  .content {
+    margin-left: 0;
+    padding: 16px;
+  }
+
+  .header-nav {
+    display: none;
+  }
+}
+
+/* Product Section */
+.product-hero {
+  text-align: center;
+  padding: 48px 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 12px;
+  margin-bottom: 40px;
+}
+
+.hero-badge {
+  display: inline-block;
+  background: #0a1a3c;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+.hero-title {
+  font-size: 36px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 16px;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  max-width: 600px;
+  margin: 0 auto 32px;
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.hero-btn {
+  padding: 12px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.hero-btn.primary {
+  background: #0a1a3c;
+  color: white;
+}
+
+.hero-btn.primary:hover {
+  background: #0f2547;
+  box-shadow: 0 4px 12px rgba(10, 26, 60, 0.3);
+}
+
+.hero-btn.secondary {
+  background: white;
+  color: #0a1a3c;
+  border: 2px solid #e5e7eb;
+}
+
+.hero-btn.secondary:hover {
+  border-color: #0a1a3c;
+  background: #f9fafb;
+}
+
+/* Product Features */
+.product-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+.feature-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 28px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.feature-card:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+}
+
+.feature-icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+.feature-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 10px;
+}
+
+.feature-description {
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+}
+
+/* Use Cases */
+.use-cases-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 20px;
+}
+
+.use-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.use-case-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 24px;
+  transition: all 0.2s;
+}
+
+.use-case-card:hover {
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.use-case-icon {
+  font-size: 28px;
+  margin-bottom: 14px;
+}
+
+.use-case-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.use-case-description {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+
+/* Responsive for Product Section */
+@media (max-width: 900px) {
+  .product-features,
+  .use-cases-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 28px;
+  }
+
+  .hero-subtitle {
+    font-size: 14px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .hero-btn {
+    width: 100%;
+  }
+}
