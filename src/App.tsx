@@ -166,7 +166,7 @@ function formatJSON(obj: object): string {
 
 // Navigation items
 const navItems = [
-  { id: 'product', label: 'Producto' },
+  { id: 'product', label: 'Product' },
   { id: 'overview', label: 'Overview' },
   { id: 'client', label: 'Client Integration', children: [
     { id: 'auth', label: 'Authentication' },
@@ -587,15 +587,14 @@ function App() {
           <section id="product">
             {/* Hero */}
             <div className="product-hero">
-              <div className="hero-badge">SDK Biométrico como Servicio</div>
-              <h1 className="hero-title">Verificación de Identidad para tu Aplicación</h1>
+              <div className="hero-badge">Biometric SDK as a Service</div>
+              <h1 className="hero-title">Identity Verification for Your Application</h1>
               <p className="hero-subtitle">
-                Integra liveness detection, OCR de documentos y comparación facial 
-                en minutos mediante una API REST moderna.
+                Integrate liveness detection, document OCR and face comparison in minutes via a modern REST API.
               </p>
               <div className="hero-buttons">
                 <button className="hero-btn primary" onClick={() => scrollTo('client')}>
-                  Ver Documentación
+                  View Documentation
                 </button>
               </div>
             </div>
@@ -604,62 +603,62 @@ function App() {
             <div className="product-features">
               <div className="feature-card">
                 <div className="feature-icon">🔌</div>
-                <h3 className="feature-title">Simple de integrar</h3>
+                <h3 className="feature-title">Simple to integrate</h3>
                 <p className="feature-description">
-                  Solo 2 endpoints para el cliente: autenticación y start_circuit. 
-                  El portal frontend maneja el resto.
+                  Only 2 endpoints for the client: authentication and start_circuit. 
+                  The frontend portal handles the rest.
                 </p>
               </div>
               <div className="feature-card">
                 <div className="feature-icon">⚙️</div>
-                <h3 className="feature-title">Configurable por caso de uso</h3>
+                <h3 className="feature-title">Configurable per use case</h3>
                 <p className="feature-description">
-                  Combina liveness, OCR, comparación facial y verificación de datos 
-                  según tu necesidad.
+                  Combine liveness, OCR, face comparison and data verification 
+                  according to your needs.
                 </p>
               </div>
               <div className="feature-card">
                 <div className="feature-icon">⚡</div>
-                <h3 className="feature-title">Resultados en tiempo real</h3>
+                <h3 className="feature-title">Real-time results</h3>
                 <p className="feature-description">
-                  Webhook instantáneo cuando la verificación completa o falla, 
-                  con resultado detallado por paso.
+                  Instant webhook when verification completes or fails, 
+                  with detailed result per step.
                 </p>
               </div>
             </div>
 
             {/* Use Cases */}
-            <h2 className="use-cases-title">Casos de uso</h2>
+            <h2 className="use-cases-title">Use Cases</h2>
             <div className="use-cases-grid">
               <div className="use-case-card">
                 <div className="use-case-icon">💬</div>
                 <h3 className="use-case-title">WhatsApp</h3>
                 <p className="use-case-description">
-                  Inicia verificaciones directamente desde conversaciones de WhatsApp 
-                  usando el parámetro wamid.
+                  Start verifications directly from WhatsApp conversations 
+                  using the wamid parameter.
                 </p>
               </div>
               <div className="use-case-card">
                 <div className="use-case-icon">📱</div>
-                <h3 className="use-case-title">Onboarding Digital</h3>
+                <h3 className="use-case-title">Digital Onboarding</h3>
                 <p className="use-case-description">
-                  Verifica la identidad de nuevos clientes antes de 
-                  activar su cuenta.
+                  Verify the identity of new customers before 
+                  activating their account.
                 </p>
               </div>
               <div className="use-case-card">
                 <div className="use-case-icon">📋</div>
-                <h3 className="use-case-title">KYC / Cumplimiento</h3>
+                <h3 className="use-case-title">KYC / Compliance</h3>
                 <p className="use-case-description">
-                  Cumple requisitos regulatorios con verificación 
-                  biométrica auditable.
+                  Meet regulatory requirements with auditable 
+                  biometric verification.
                 </p>
               </div>
             </div>
           </section>
 
           {/* Overview */}
-          <div id="overview">
+          <div id="overview" style={{ marginTop: '48px' }}>
             <h1 className="page-title">biometric-api Documentation</h1>
             <p className="page-description">
               Biometric SDK as a service (SaaS) that allows any company to integrate identity verifications via modern REST API.
