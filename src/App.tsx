@@ -228,7 +228,7 @@ const endpoints: Endpoint[] = [
       clientId: '7k9j8h7g6f5e4d3c2b1a',
       clientSecret: 'xyzwxyzwxyzwxyzwxyzwxyzwxyzwxyzwxyzwxyzwxyzw'
     },
-    curl: `curl -X POST "https://api.biometric.danaconnect.com/api/admin/clients/create" \\
+    curl: `curl -X POST "https://api.biometric.danaconnect.us/api/admin/clients/create" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"code_client": "cliente001", "username": "admin@cliente.com"}'`
@@ -255,7 +255,7 @@ const endpoints: Endpoint[] = [
       channelId: '550e8400-e29b-41d4-a716-446655440000',
       createdAt: '2025-08-20T10:00:00.000Z'
     },
-    curl: `curl -X POST "https://api.biometric.danaconnect.com/api/admin/channels" \\
+    curl: `curl -X POST "https://api.biometric.danaconnect.us/api/admin/channels" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"id_client": 123, "code_client": "cliente001", "name": "Verification", "settings": {...}}'`
@@ -277,7 +277,7 @@ const endpoints: Endpoint[] = [
       code_client: 'cliente001',
       settings: channelSettings
     },
-    curl: `curl -X GET "https://api.biometric.danaconnect.com/api/admin/channels/550e8400-e29b-41d4-a716-446655440000" \\
+    curl: `curl -X GET "https://api.biometric.danaconnect.us/api/admin/channels/550e8400-e29b-41d4-a716-446655440000" \\
   -H "x-admin-key: <ADMIN_KEY>"`
   },
   {
@@ -306,7 +306,7 @@ const endpoints: Endpoint[] = [
       name: 'Updated Verification',
       settings: channelSettings
     },
-    curl: `curl -X PUT "https://api.biometric.danaconnect.com/api/admin/channels/550e8400-e29b-41d4-a716-446655440000" \\
+    curl: `curl -X PUT "https://api.biometric.danaconnect.us/api/admin/channels/550e8400-e29b-41d4-a716-446655440000" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Updated Verification", "settings": {"thresholds": {"livenessConfidenceThreshold": 85}}}'`
@@ -332,7 +332,7 @@ const endpoints: Endpoint[] = [
       circuitId: '550e8400-e29b-41d4-a716-446655440000',
       link: 'https://verificacion.cliente.com/?circuit=550e8400-e29b-41d4-a716-446655440000'
     },
-    curl: `curl -X POST "https://api.biometric.danaconnect.com/api/biometric/start_circuit/550e8400-e29b-41d4-a716-446655440001" \\
+    curl: `curl -X POST "https://api.biometric.danaconnect.us/api/biometric/start_circuit/550e8400-e29b-41d4-a716-446655440001" \\
   -H "Authorization: Bearer <ACCESS_TOKEN>" \\
   -H "Content-Type: application/json" \\
   -d '{"person": {"name": "Juan Pérez", "documentNumber": "12345678", "email": "juan@email.com"}}'`
@@ -359,7 +359,7 @@ const endpoints: Endpoint[] = [
       ui: channelSettings.ui,
       thresholds: channelSettings.thresholds
     },
-    curl: `curl -X GET "https://api.biometric.danaconnect.com/api/biometric/get_config/550e8400-e29b-41d4-a716-446655440000" \\
+    curl: `curl -X GET "https://api.biometric.danaconnect.us/api/biometric/get_config/550e8400-e29b-41d4-a716-446655440000" \\
   -H "x-internal-key: <INTERNAL_KEY>"`
   },
   {
@@ -380,7 +380,7 @@ const endpoints: Endpoint[] = [
       s3Key: 'cliente001/uuid/front.jpg',
       expiresIn: 600
     },
-    curl: `curl -X GET "https://api.biometric.danaconnect.com/api/biometric/upload-url/550e8400-e29b-41d4-a716-446655440000?type=front" \\
+    curl: `curl -X GET "https://api.biometric.danaconnect.us/api/biometric/upload-url/550e8400-e29b-41d4-a716-446655440000?type=front" \\
   -H "x-internal-key: <INTERNAL_KEY>"`
   },
   {
@@ -411,7 +411,7 @@ const endpoints: Endpoint[] = [
       stepsCompleted: ['liveness'],
       nextStep: 'ocr'
     },
-    curl: `curl -X POST "https://api.biometric.danaconnect.com/api/biometric/process_circuit/550e8400-e29b-41d4-a716-446655440000" \\
+    curl: `curl -X POST "https://api.biometric.danaconnect.us/api/biometric/process_circuit/550e8400-e29b-41d4-a716-446655440000" \\
   -H "x-internal-key: <INTERNAL_KEY>" \\
   -H "Content-Type: application/json" \\
   -d '{"step": "liveness", "data": {"sessionId": "rekognition-session-id"}}'`
