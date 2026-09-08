@@ -110,7 +110,7 @@ Biometric SDK as a service (SaaS) that allows any company to integrate identity 
 
 Full API documentation is available at the deployed Amplify URL:
 
-- **Production**: https://biometric-api-main.amplifyapp.com
+- **Production**: https://api-biometric.danaconnect.us/
 - **Local**: http://localhost:3001
 
 The documentation covers:
