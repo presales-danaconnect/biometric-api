@@ -202,7 +202,7 @@ const endpoints: Endpoint[] = [
       token_type: 'Bearer',
       expires_in: 3600
     },
-    curl: `curl -X POST "https://biometric-api-main.auth.us-east-1.amazoncognito.com/oauth2/token" \\
+    curl: `curl -X POST "https://auth.biometric.danaconnect.us/oauth2/token" \\
   -H "Content-Type: application/x-www-form-urlencoded" \\
   -d "grant_type=client_credentials" \\
   -d "client_id=<CLIENT_ID>" \\
