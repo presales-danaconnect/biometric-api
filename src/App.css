@@ -385,19 +385,19 @@
   position: absolute;
   top: 12px;
   right: 12px;
-  background: #f3f4f6;
+  background: #334155;
   border: none;
-  padding: 6px 10px;
+  padding: 3px 8px;
   border-radius: 4px;
   font-size: 11px;
-  color: #6b7280;
+  color: #94a3b8;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .copy-btn:hover {
-  background: #e5e7eb;
-  color: #111827;
+  background: #475569;
+  color: white;
 }
 
 .code-wrapper {

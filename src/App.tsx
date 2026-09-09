@@ -214,7 +214,7 @@ const endpoints: Endpoint[] = [
     id: 'admin-clients-create',
     method: 'POST',
     path: '/api/admin/clients/create',
-    description: 'Creates a Cognito App Client for an enterprise client',
+    description: 'Creates a enterprise client. The danaconnect field is optional, used to call the Danaconnect API when isProject is enabled in the channel settings.',
     auth: 'admin',
     headers: [
       { name: 'x-admin-key', required: true, value: '<ADMIN_KEY>' },
@@ -222,7 +222,11 @@ const endpoints: Endpoint[] = [
     ],
     body: {
       code_client: 'cliente001',
-      username: 'admin@cliente.com'
+      username: 'admin@cliente.com',
+      danaconnect: {
+        clientId: '<CLIENT_ID_DANACONNECT>',
+        clientSecret: '<CLIENT_SECRET_DANACONNECT>'
+      }
     },
     response: {
       clientId: '7k9j8h7g6f5e4d3c2b1a',
@@ -231,7 +235,7 @@ const endpoints: Endpoint[] = [
     curl: `curl -X POST "https://api.biometric.danaconnect.us/api/admin/clients/create" \\
   -H "x-admin-key: <ADMIN_KEY>" \\
   -H "Content-Type: application/json" \\
-  -d '{"code_client": "cliente001", "username": "admin@cliente.com"}'`
+  -d '{"code_client": "cliente001", "username": "admin@cliente.com", "danaconnect": {"clientId": "<CLIENT_ID_DANACONNECT>", "clientSecret": "<CLIENT_SECRET_DANACONNECT>"}}'`
   },
   {
     id: 'admin-channels-create',
@@ -420,6 +424,7 @@ const endpoints: Endpoint[] = [
 
 function App() {
   const [expandedEndpoints, setExpandedEndpoints] = useState<Set<string>>(new Set())
+  const [copiedEndpoint, setCopiedEndpoint] = useState<string | null>(null)
 
   const toggleEndpoint = (id: string) => {
     const newExpanded = new Set(expandedEndpoints)
@@ -429,6 +434,12 @@ function App() {
       newExpanded.add(id)
     }
     setExpandedEndpoints(newExpanded)
+  }
+
+  const copyToClipboard = async (text: string, endpointId: string) => {
+    await navigator.clipboard.writeText(text)
+    setCopiedEndpoint(endpointId)
+    setTimeout(() => setCopiedEndpoint(null), 2000)
   }
 
   const scrollTo = (id: string) => {
@@ -527,7 +538,13 @@ function App() {
         </div>
         <div className="endpoint-section">
           <h4>cURL</h4>
-          <div className="code-wrapper">
+          <div className="code-wrapper" style={{ position: 'relative' }}>
+            <button
+              className="copy-btn"
+              onClick={() => copyToClipboard(endpoint.curl, endpoint.id)}
+            >
+              {copiedEndpoint === endpoint.id ? 'Copied!' : 'Copy'}
+            </button>
             <pre className="curl-block"><code>{endpoint.curl}</code></pre>
           </div>
         </div>
