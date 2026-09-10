@@ -50,6 +50,7 @@ export function createAdminCreateClientFunction(
         's3:CreateBucket',
         's3:PutBucketPublicAccessBlock',
         's3:PutBucketEncryption',
+        's3:PutEncryptionConfiguration',
         's3:PutBucketTagging',
         's3:PutBucketCORS',
       ],
