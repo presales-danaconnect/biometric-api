@@ -62,7 +62,9 @@ const personData = {
 const livenessResult = {
   success: true,
   confidence: 95,
-  s3Key: 'cliente001/uuid-123/liveness-reference.jpg'
+  images: {
+    reference: 'cliente001/uuid-123/liveness-reference.jpg'
+  }
 }
 
 const ocrResult = {
@@ -74,6 +76,10 @@ const ocrResult = {
     fechaNacimiento: '01-01-1990',
     fechaVencimiento: '01-01-2030',
     nacionalidad: 'VENEZOLANO'
+  },
+  images: {
+    front: 'cliente001/uuid-123/front.jpg',
+    back: 'cliente001/uuid-123/back.jpg'
   }
 }
 
@@ -89,7 +95,11 @@ const dataVerificationResult = {
 
 const compareFacesResult = {
   success: true,
-  similarity: 91
+  similarity: 91,
+  images: {
+    reference: 'cliente001/uuid-123/liveness-reference.jpg',
+    document: 'cliente001/uuid-123/front.jpg'
+  }
 }
 
 // Webhook payload - Success example
@@ -106,10 +116,45 @@ const webhookPayloadSuccess = {
   geolocation: 'Av. Principal 123, Ciudad de México, México',
   wamid: 'wamid.xxx123',
   result: {
-    liveness: livenessResult,
-    ocr: ocrResult,
-    'compare-faces': compareFacesResult,
-    'data-verification': dataVerificationResult
+    liveness: {
+      success: true,
+      confidence: 95,
+      images: {
+        reference: 'cliente001/uuid-123/liveness-reference.jpg'
+      }
+    },
+    ocr: {
+      success: true,
+      extractedData: {
+        nombre: 'JOHN',
+        apellido: 'DOE',
+        documentNumber: '12345678',
+        fechaNacimiento: '01-01-1990',
+        fechaVencimiento: '01-01-2030',
+        nacionalidad: 'VENEZOLANO'
+      },
+      images: {
+        front: 'cliente001/uuid-123/front.jpg',
+        back: 'cliente001/uuid-123/back.jpg'
+      }
+    },
+    'compare-faces': {
+      success: true,
+      similarity: 91,
+      images: {
+        reference: 'cliente001/uuid-123/liveness-reference.jpg',
+        document: 'cliente001/uuid-123/front.jpg'
+      }
+    },
+    'data-verification': {
+      success: true,
+      matches: {
+        documentNumber: true,
+        name: true
+      },
+      confidence: 95,
+      reason: 'Document number and name match'
+    }
   },
   completedAt: '2026-09-02T10:30:00.000Z'
 }
@@ -128,14 +173,46 @@ const webhookPayloadFailed = {
   geolocation: 'Av. Principal 123, Ciudad de México, México',
   wamid: 'wamid.xxx123',
   result: {
-    liveness: livenessResult,
-    ocr: ocrResult,
+    liveness: {
+      success: true,
+      confidence: 95,
+      images: {
+        reference: 'cliente001/uuid-123/liveness-reference.jpg'
+      }
+    },
+    ocr: {
+      success: true,
+      extractedData: {
+        nombre: 'JOHN',
+        apellido: 'DOE',
+        documentNumber: '12345678',
+        fechaNacimiento: '01-01-1990',
+        fechaVencimiento: '01-01-2030',
+        nacionalidad: 'VENEZOLANO'
+      },
+      images: {
+        front: 'cliente001/uuid-123/front.jpg',
+        back: 'cliente001/uuid-123/back.jpg'
+      }
+    },
     'compare-faces': {
       success: false,
       errorCode: 'MAX_ATTEMPTS_REACHED',
-      similarity: 0
+      similarity: 0,
+      images: {
+        reference: 'cliente001/uuid-123/liveness-reference.jpg',
+        document: 'cliente001/uuid-123/front.jpg'
+      }
     },
-    'data-verification': dataVerificationResult
+    'data-verification': {
+      success: true,
+      matches: {
+        documentNumber: true,
+        name: true
+      },
+      confidence: 95,
+      reason: 'Document number and name match'
+    }
   },
   completedAt: '2026-09-02T10:45:00.000Z'
 }
