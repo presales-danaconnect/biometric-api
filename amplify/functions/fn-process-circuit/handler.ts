@@ -55,7 +55,6 @@ interface StepResult {
   success: boolean;
   confidence?: number;
   similarity?: number;
-  s3Key?: string;
   extractedData?: {
     nombre?: string;
     apellido?: string;
@@ -71,6 +70,12 @@ interface StepResult {
   error?: string;
   errorCode?: string;
   retryStep?: string;
+  images?: {
+    front?: string;
+    back?: string;
+    reference?: string;
+    document?: string;
+  };
 }
 
 interface CircuitItem {
@@ -213,7 +218,7 @@ async function getLivenessResult(
   return {
     success,
     confidence,
-    s3Key,
+    images: s3Key ? { reference: s3Key } : undefined,
     error: success ? undefined : `Confidence ${confidence} below threshold ${threshold}`,
   };
 }
@@ -284,7 +289,14 @@ async function performOcr(bucket: string, circuitId: string, requiresBack: boole
   // Remove isDocument from extractedData before returning
   const { isDocument, ...cleanedData } = extractedData;
 
-  return { success: true, extractedData: cleanedData };
+  return {
+    success: true,
+    extractedData: cleanedData,
+    images: {
+      front: `${circuitId}/front.jpg`,
+      ...(requiresBack && backImage ? { back: `${circuitId}/back.jpg` } : {}),
+    },
+  };
 }
 
 async function performDataVerification(circuit: CircuitItem): Promise<StepResult> {
@@ -392,13 +404,24 @@ async function performCompareFaces(
     const response = await rekognitionClient.send(command);
 
     if (!response.FaceMatches || response.FaceMatches.length === 0) {
-      return { success: false, similarity: 0 };
+      return {
+        success: false,
+        similarity: 0,
+        images: {
+          reference: `${circuitId}/liveness-reference.jpg`,
+          document: `${circuitId}/front.jpg`,
+        },
+      };
     }
 
     const similarity = response.FaceMatches[0].Similarity || 0;
     return {
       success: similarity >= threshold,
       similarity: Math.round(similarity),
+      images: {
+        reference: `${circuitId}/liveness-reference.jpg`,
+        document: `${circuitId}/front.jpg`,
+      },
     };
   } catch (error: any) {
     if (error.__type === 'InvalidParameterException' || error.name === 'InvalidParameterException') {
@@ -407,6 +430,10 @@ async function performCompareFaces(
         similarity: 0,
         errorCode: 'NO_FACE_IN_IMAGE',
         error: 'No face detected in one of the images',
+        images: {
+          reference: `${circuitId}/liveness-reference.jpg`,
+          document: `${circuitId}/front.jpg`,
+        },
       };
     }
     throw error;
