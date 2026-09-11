@@ -897,7 +897,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       expressionAttributeValues[':completedAt'] = new Date().toISOString();
     }
 
-    if (geolocation && !circuit.geolocation) {
+    if (geolocation && !circuit.geolocation && circuit.geolocation !== '') {
       updateParts.push('#geolocation = :geolocation');
       expressionAttributeNames['#geolocation'] = 'geolocation';
       expressionAttributeValues[':geolocation'] = geolocation;
